@@ -21,5 +21,10 @@ namespace AdminToolkit
             // coming soon
             MainFrame.Navigate(new Pages.PurgerPage());
         }
+
+        private void NavArchive_Click(object sender, RoutedEventArgs e)
+        {
+            MainFrame.Navigate(new Pages.ArchiveUserPage());
+        }
     }
 }

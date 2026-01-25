@@ -15,6 +15,8 @@
                         Click="NavCopier_Click" />
                 <Button Content="Recycle Bin Purger" Style="{StaticResource MenuButtonStyle}"
                         Click="NavPurger_Click"/>
+                <Button Content="Archive Old Users" Style="{StaticResource MenuButtonStyle}"
+                        Click="NavArchive_Click" />
             </StackPanel>
             <TextBlock Text="v1.0.0" Foreground="Gray" VerticalAlignment="Bottom"
                        HorizontalAlignment="Center" Margin="10"/>
