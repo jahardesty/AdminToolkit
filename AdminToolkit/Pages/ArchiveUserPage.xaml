@@ -20,6 +20,13 @@
             <TextBox x:Name="txtSourcePath" Margin="0,5,0,15"/>
 
             <TextBlock Text="Archive Destination:" FontWeight="Bold"/>
+            <Button x:Name="btnOpenArchive" 
+        Content="📂 Open Archive Folder" 
+        Style="{StaticResource MenuButtonStyle}" 
+        Width="200" 
+        HorizontalAlignment="Left" 
+        Margin="10,5,0,5"
+        Click="OpenArchive_Click"/>
             <TextBox x:Name="txtArchivePath" Margin="0,5,0,15"/>
 
             <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
@@ -28,7 +35,8 @@
             </StackPanel>
         </StackPanel>
 
-        <UniformGrid Grid.Row="1" Columns="2" Margin="0,0,0,10">
+        <UniformGrid Grid.Row="1" Columns="3" Margin="0,0,0,10">
+            <Button x:Name="btnScanDelete" Content="Scan for Deleted Users" Click="FindDeletedUsers_Click" Height="45" Margin="0,0,5,0"/>
             <Button x:Name="btnScan" Content="Scan for Inactive Users" Click="StartScan_Click" Height="45" Margin="0,0,5,0"/>
             <Button x:Name="btnArchive" Content="Archive Users" Click="StartArchive_Click" Height="45" Margin="5,0,0,0" Background="#007ACC" Foreground="White"/>
         </UniformGrid>
