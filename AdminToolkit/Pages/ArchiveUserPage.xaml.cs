@@ -27,6 +27,12 @@ namespace AdminToolkit.Pages
         {
             int days = int.Parse(txtDays.Text);
             string source = txtSourcePath.Text;
+            if (!int.TryParse(txtDays.Text, out int daysThreshold))
+
+            {
+                MessageBox.Show("Please enter a valid number for days.");
+                return;
+            }
 
             txtLog.Clear();
             LogToUI($"Searching for users who haven't logged in for {days} days...");
@@ -38,11 +44,14 @@ namespace AdminToolkit.Pages
                     var userPrincipal = new UserPrincipal(context);
                     var searcher = new PrincipalSearcher(userPrincipal);
 
+                    /*
                     foreach (var result in searcher.FindAll())
                     {
                         var user = result as UserPrincipal;
                         if (user != null && user.LastLogon != null)
                         {
+                            //LogToUI($"Check: {user.SamAccountName} | Last login: {user.LastLogon}");
+                            LogToUI($"Found user {user.SamAccountName}. Days since login: {(user.LastLogon.HasValue ? Math.Round((DateTime.Now - user.LastLogon.Value).TotalDays).ToString() : "NULL")}");
                             TimeSpan inactiveFor = DateTime.Now - user.LastLogon.Value;
                             if (inactiveFor.TotalDays > days)
                             {
@@ -51,6 +60,35 @@ namespace AdminToolkit.Pages
                                 if (Directory.Exists(userFolderPath))
                                 {
                                     LogToUI($"FOUND: {user.SamAccountName} (Last login: {user.LastLogon})");
+                                }
+                            }
+                        }
+                    
+                    }
+                    */
+                    foreach (var result in searcher.FindAll())
+                    {
+                        var user = result as UserPrincipal;
+                        if (user != null && user.LastLogon.HasValue)
+                        {
+                            // 1. Calculate and round the days
+                            double inactiveDays = (DateTime.Now - user.LastLogon.Value).TotalDays;
+                            int roundedDays = (int)Math.Round(inactiveDays);
+
+                            // 2. Filter based on your txtDays input
+                            if (roundedDays >= daysThreshold)
+                            {
+                                // 3. Check if the folder actually exists
+                                string userFolderPath = Path.Combine(source, user.SamAccountName);
+
+                                if (Directory.Exists(userFolderPath))
+                                {
+                                    LogToUI($"MATCH: {user.SamAccountName} | Inactive: {roundedDays} days | Path: {userFolderPath}");
+                                }
+                                else
+                                {
+                                    // Optional: Log users who are old but don't have a folder
+                                    // LogToUI($"INFO: {user.SamAccountName} is old ({roundedDays} days) but has no folder.");
                                 }
                             }
                         }
