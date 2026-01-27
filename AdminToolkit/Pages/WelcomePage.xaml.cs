@@ -24,10 +24,20 @@ namespace AdminToolkit.Pages
         {
             InitializeComponent();
             bool isAdmin = new System.Security.Principal.WindowsPrincipal(System.Security.Principal.WindowsIdentity.GetCurrent())
-        .IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+            .IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
 
             lblAdminStatus.Text = isAdmin ? "Running as Administrator (Elevated)" : "Running as Standard User (Limited)";
             lblAdminStatus.Foreground = isAdmin ? System.Windows.Media.Brushes.Green : System.Windows.Media.Brushes.Red;
+        }
+
+        // WelcomePage.xaml.cs
+
+        private void OpenReadme_Click(object sender, RoutedEventArgs e)
+        {
+            // Changed ReadMeWindow to ReadmeWindow
+            ReadmeWindow readme = new ReadmeWindow();
+            readme.Owner = Window.GetWindow(this);
+            readme.ShowDialog();
         }
     }
 }

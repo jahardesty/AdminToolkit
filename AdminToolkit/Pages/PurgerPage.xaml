@@ -31,7 +31,7 @@
                 Height="45" Margin="0,0,5,0" Background="#515151" Foreground="White"/>
 
             <Button x:Name="btnStart" Grid.Column="1" Content="Purge All Recycle Bins" Click="StartPurge_Click" 
-                Height="45" Margin="5,0,0,0" Background="#D13438" Foreground="White" FontWeight="Bold"/>
+                Height="45" Margin="5,0,0,0" Background="#D13438" Foreground="White"/>
         </Grid>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,5,0,5">

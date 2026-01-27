@@ -42,5 +42,9 @@
         </UniformGrid>
 
         <TextBox x:Name="txtLog" Grid.Row="2" IsReadOnly="True" VerticalScrollBarVisibility="Auto" FontFamily="Consolas" Background="#F3F3F3"/>
+        <StackPanel Margin="10,0,10,10">
+            <TextBlock x:Name="lblProgressStatus" Text="Ready" Margin="0,0,0,5" Foreground="Gray"/>
+            <ProgressBar x:Name="archiveProgressBar" Height="20" Minimum="0" Maximum="100"/>
+        </StackPanel>
     </Grid>
 </Page>

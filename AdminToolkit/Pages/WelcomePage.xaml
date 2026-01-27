@@ -13,6 +13,15 @@
                     <TextBlock x:Name="lblAdminStatus" Text="Checking Permissions..." Foreground="#007ACC"/>
                 </StackPanel>
             </Border>
+            <Button x:Name="btnHelp"
+                    Content="❓ Help &amp; Readme" 
+                    HorizontalAlignment="Right" 
+                    VerticalAlignment="Bottom" 
+                    Margin="20"
+                    Padding="10,5"
+                    Click="OpenReadme_Click"/>
         </StackPanel>
     </Grid>
+    
+    
 </Page>
