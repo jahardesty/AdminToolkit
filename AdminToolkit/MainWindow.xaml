@@ -92,6 +92,8 @@
                         Click="NavPurger_Click"/>
                 <Button Content="Archive Old Users" Style="{StaticResource MenuButtonStyle}"
                         Click="NavArchive_Click" />
+                <Button Content="Account Lockout Search" Style="{StaticResource MenuButtonStyle}"
+                        Click="NavAccountLockout_Click" />
             </StackPanel>
             <Button Content="Home" Style="{StaticResource HomeButtonStyle}" 
                     VerticalAlignment="Bottom" Margin="40"

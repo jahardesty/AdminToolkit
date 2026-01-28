@@ -33,6 +33,11 @@ namespace AdminToolkit
             MainFrame.Navigate(new Pages.ArchiveUserPage());
         }
 
+        private void NavAccountLockout_Click(object sender, RoutedEventArgs e)
+        {
+            MainFrame.Navigate(new Pages.AccountLockoutPage());
+        }
+
         private void NavWelcomePage_Click(object sender, RoutedEventArgs e)
         {
             MainFrame.Navigate(new Pages.WelcomePage());

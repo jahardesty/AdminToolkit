@@ -1,0 +1,62 @@
+﻿<Page x:Class="AdminToolkit.Pages.AccountLockoutPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      Title="Account Lockout Tracker"
+      Background="{StaticResource PageBackgroundBrush}">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock Text="Lockout Source Tracker" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Username (Leave blank for ALL):" Margin="0,0,0,5"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBox x:Name="txtLockoutUser" Width="200" Margin="0,0,10,0" KeyDown="TxtLockoutUser_KeyDown"/>
+                        <Button x:Name="btnCheckLockout" Content="Search Events" Click="CheckLockout_Click" Width="120" IsDefault="True"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Margin="20,0,0,0">
+                    <TextBlock Text="Days to look back:" Margin="0,0,0,5"/>
+                    <TextBox x:Name="txtDaysBack" Width="50" Text="1" HorizontalAlignment="Left" Padding="3"/>
+                </StackPanel>
+            </Grid>
+        </StackPanel>
+        <StackPanel x:Name="statusArea" Grid.Row="2" Orientation="Horizontal" Visibility="Collapsed" Margin="0,10,0,0">
+            <ProgressBar IsIndeterminate="True" Width="20" Height="20" Margin="0,0,10,0"/>
+            <TextBlock x:Name="lblStatus" Text="Scanning Domain Controllers..." VerticalAlignment="Center" Foreground="#555"/>
+        </StackPanel>
+
+        <DataGrid x:Name="dgResults" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" 
+          Background="White" RowHeaderWidth="0" GridLinesVisibility="Horizontal">
+            <DataGrid.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Unlock User Account" Click="UnlockUser_Click">
+                        <MenuItem.Icon>
+                            <TextBlock Text="🔓"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                </ContextMenu>
+            </DataGrid.ContextMenu>
+
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Time Locked" Binding="{Binding Time}" Width="150"/>
+                <DataGridTextColumn Header="User Name" Binding="{Binding UserName}" Width="120"/>
+                <DataGridTextColumn Header="Source Computer" Binding="{Binding Source}" Width="*"/>
+                <DataGridTextColumn Header="DC" Binding="{Binding DC}" Width="120"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</Page>
