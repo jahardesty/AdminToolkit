@@ -1,7 +1,8 @@
 ﻿<Window x:Class="AdminToolkit.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Admin Toolkit" Height="600" Width="1000" Background="#F0F0F0">
+        Title="Admin Toolkit" Height="600" Width="1000" Background="#F0F0F0"
+        Icon="pack://application:,,,/Assets/toolbox.ico">
 
     <Window.Resources>
         <Style x:Key="MenuButtonStyle" TargetType="Button">
@@ -85,8 +86,8 @@
             <StackPanel>
                 <TextBlock Text="SYSADMIN TOOLS" Foreground="#007acc"
                            FontWeight="Bold" Margin="20,30,20,20" FontSize="16"/>
-                <Button Content="Long Path Copier" Style="{StaticResource MenuButtonStyle}"
-                        Click="NavCopier_Click" />
+                <Button Content="AD Search" Style="{StaticResource MenuButtonStyle}"
+                        Click="NavADSearch_Click" />
                 <Button Content="Recycle Bin Purger" Style="{StaticResource MenuButtonStyle}"
                         Click="NavPurger_Click"/>
                 <Button Content="Archive Old Users" Style="{StaticResource MenuButtonStyle}"

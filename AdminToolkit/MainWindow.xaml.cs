@@ -11,15 +11,20 @@ namespace AdminToolkit
             InitializeComponent();
             MainFrame.Navigate(new Pages.WelcomePage());
         }
+       /*
         private void NavCopier_Click(object sender, RoutedEventArgs e)
         {
             //coming soon
             MainFrame.Navigate(new Pages.CopierPage());
         }
+       */
 
+        private void NavADSearch_Click(object sender, RoutedEventArgs e)
+        {
+            MainFrame.Navigate(new Pages.ADSearchPage());
+        }
         private void NavPurger_Click(object sender, RoutedEventArgs e)
         {
-            // coming soon
             MainFrame.Navigate(new Pages.PurgerPage());
         }
 
