@@ -139,7 +139,8 @@ namespace AdminToolkit.Pages
             }
 
             btnArchive.IsEnabled = false;
-            LogToUI("--- ORPHAN ARCHIVE OPERATION STARTED ---");
+            archiveProgressBar.Value = 0;
+            LogToUI("--- ARCHIVE OPERATION STARTED ---");
             LogToUI("Searching for folders with no matching Active Directory account...");
 
             await Task.Run(() =>
@@ -150,11 +151,21 @@ namespace AdminToolkit.Pages
                     {
                         // 1. Get all directories in the source path
                         string[] folderPaths = Directory.GetDirectories(source);
+                        int totalFolders = folderPaths.Length;
+                        int processedCount = 0;
 
                         foreach (var folderPath in folderPaths)
                         {
                             // Get just the folder name (e.g., "jhardesty")
+                            
                             string folderName = System.IO.Path.GetFileName(folderPath);
+                            double percentage = ((double)processedCount / totalFolders) * 100;
+
+                            Dispatcher.Invoke(() =>
+                            {
+                                archiveProgressBar.Value = percentage;
+                                lblProgressStatus.Text = $"Processing: {folderName} ({processedCount}/{totalFolders})";
+                            });
 
                             try
                             {
@@ -188,7 +199,7 @@ namespace AdminToolkit.Pages
 
                 LogToUI("--- ORPHAN ARCHIVE OPERATION COMPLETE ---");
             });
-
+            lblProgressStatus.Text = "Archive Complete";
             btnArchive.IsEnabled = true;
         }
 
