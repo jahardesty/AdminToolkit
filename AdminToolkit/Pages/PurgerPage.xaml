@@ -1,9 +1,12 @@
-﻿<Page
+﻿<Page x:Class="AdminToolkit.Pages.PurgerPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    Background="{StaticResource PageBackgroundBrush}"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="d" x:Class="AdminToolkit.Pages.PurgerPage"
-      Title="PurgerPage" d:DesignWidth="624.384">
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      mc:Ignorable="d" 
+      Title="PurgerPage" d:DesignWidth="624"
+      Background="{StaticResource PageBackgroundBrush}">
+
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -13,14 +16,31 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0">
-            <TextBlock Text="Redirected Folders Root Path:" Margin="0,0,0,5" FontWeight="Bold"/>
-            <TextBlock Text="Example: D:\Redirect" Foreground="Gray" FontSize="11" Margin="0,0,0,5"/>
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock Text="Recycle Bin Purger" FontSize="18" FontWeight="Bold" Margin="0,0,0,15"/>
+
+            <DockPanel Margin="0,0,0,10">
+                <TextBlock Text="Redirected Folders Root Path:" 
+                           VerticalAlignment="Center" 
+                           FontWeight="Bold" 
+                           Margin="0,0,10,0"/>
+
+                <ComboBox x:Name="cmbDepartments" 
+                          DisplayMemberPath="Name" 
+                          SelectedValuePath="Path" 
+                          SelectionChanged="CmbDepartments_SelectionChanged"
+                          Width="250" 
+                          HorizontalAlignment="Left"/>
+            </DockPanel>
+
+            <TextBlock Text="Example: \\Server\Redirected$" Foreground="Gray" FontSize="11" Margin="0,0,0,5"/>
+
             <DockPanel Margin="0,0,0,15">
                 <Button Content="Browse" Click="Browse_Click" DockPanel.Dock="Right" Width="75" Margin="5,0,0,0"/>
-                <TextBox x:Name="txtRootPath" VerticalContentAlignment="Center"/>
+                <TextBox x:Name="txtSelectedPath" IsReadOnly="True" Background="#F0F0F0" VerticalContentAlignment="Center" Padding="5,2"/>
             </DockPanel>
-        </StackPanel>
+
+         </StackPanel>
 
         <Grid Grid.Row="1" Margin="0,0,0,10">
             <Grid.ColumnDefinitions>
@@ -29,10 +49,10 @@
             </Grid.ColumnDefinitions>
 
             <Button x:Name="btnScan" Grid.Column="0" Content="Scan Only" Click="StartScan_Click"
-                Height="45" Margin="0,0,5,0" Background="#515151" Foreground="White"/>
+                    Height="45" Margin="0,0,5,0" Background="#515151" Foreground="White"/>
 
             <Button x:Name="btnStart" Grid.Column="1" Content="Purge All Recycle Bins" Click="StartPurge_Click" 
-                Height="45" Margin="5,0,0,0" Background="#D13438" Foreground="White"/>
+                    Height="45" Margin="5,0,0,0" Background="#D13438" Foreground="White"/>
         </Grid>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,5,0,5">
@@ -41,13 +61,12 @@
         </StackPanel>
 
         <TextBlock Grid.Row="3" Text="Activity Log:" Margin="0,10,0,5" FontWeight="Bold"/>
-
         <TextBox x:Name="txtLog" Grid.Row="4" 
-             IsReadOnly="True" 
-             VerticalScrollBarVisibility="Auto" 
-             HorizontalScrollBarVisibility="Auto"
-             FontFamily="Consolas" 
-             Background="#F3F3F3"
-             Padding="5"/>
+                 IsReadOnly="True" 
+                 VerticalScrollBarVisibility="Auto" 
+                 HorizontalScrollBarVisibility="Auto"
+                 FontFamily="Consolas" 
+                 Background="#F3F3F3"
+                 Padding="5"/>
     </Grid>
 </Page>

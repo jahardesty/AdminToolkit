@@ -2,29 +2,55 @@
 using System.Collections.Generic;
 using System.IO;
 using Path = System.IO.Path;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using System.Text.Json;
 
 namespace AdminToolkit.Pages
 {
-    /// <summary>
-    /// Interaction logic for PurgerPage.xaml
-    /// </summary>
     public partial class PurgerPage : Page
     {
+        public class DepartmentConfig
+        {
+            public List<Department> Departments { get; set; }
+            public List<string> FoldersToSkip { get; set; } = new List<string>();
+        }
+        public class Department
+        {
+            public string Name { get; set; }
+            public string Path { get; set; }
+        }
+
         public PurgerPage()
         {
             InitializeComponent();
+            LoadDepartments();
+        }
+
+        private void LoadDepartments()
+        {
+            try
+            {
+                string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
+                if (!File.Exists(configPath)) return;
+
+                string json = File.ReadAllText(configPath);
+                var config = JsonSerializer.Deserialize<DepartmentConfig>(json);
+                cmbDepartments.ItemsSource = config.Departments;
+            }
+            catch (Exception ex)
+            {
+                LogToUI($"Error loading departments: {ex.Message}");
+            }
+        }
+
+        private void CmbDepartments_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (cmbDepartments.SelectedValue != null)
+            {
+                txtSelectedPath.Text = cmbDepartments.SelectedValue.ToString();
+            }
         }
 
         private void Browse_Click(object sender, RoutedEventArgs e)
@@ -32,128 +58,50 @@ namespace AdminToolkit.Pages
             var dialog = new Microsoft.Win32.OpenFolderDialog();
             if (dialog.ShowDialog() == true)
             {
-                txtRootPath.Text = dialog.FolderName;
+                txtSelectedPath.Text = dialog.FolderName;
             }
         }
-        private long totalBytesSaved = 0;
+
         private long GetDirectorySize(string path)
         {
             long size = 0;
-            DirectoryInfo di = new DirectoryInfo(path);
-            foreach (FileInfo fi in di.GetFiles("*", SearchOption.AllDirectories))
+            try
             {
-                size += fi.Length;
+                DirectoryInfo di = new DirectoryInfo(path);
+                foreach (FileInfo fi in di.GetFiles("*", SearchOption.AllDirectories))
+                {
+                    size += fi.Length;
+                }
             }
+            catch { /* Skip folders where access is denied */ }
             return size;
         }
 
         private async void StartScan_Click(object sender, RoutedEventArgs e)
         {
-            string root = txtRootPath.Text;
-            if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) return;
-
-            btnScan.IsEnabled = false;
-            btnStart.IsEnabled = false;
-            totalBytesSaved = 0;
-            UpdateSpaceUI(0);
-            txtLog.Clear();
-            LogToUI("--- SCANNING ONLY (No Deletion) ---");
-
-            await Task.Run(() =>
-            {
-                try
-                {
-                    var userDirs = Directory.GetDirectories(root);
-                    foreach (var userDir in userDirs)
-                    {
-                        var bins = Directory.GetDirectories(userDir, "$Recycle.Bin", SearchOption.AllDirectories);
-                        foreach (var bin in bins)
-                        {
-                            long binSize = GetDirectorySize(bin);
-                            totalBytesSaved += binSize;
-                            UpdateSpaceUI(totalBytesSaved);
-                            LogToUI($" FOUND: {bin} ({FormatBytes(binSize)})");
-                        }
-                    }
-                    LogToUI($"--- SCAN COMPLETE: {FormatBytes(totalBytesSaved)} can be recovered ---");
-                }
-                catch (Exception ex) { LogToUI($"ERROR: {ex.Message}"); }
-            });
-
-            btnScan.IsEnabled = true;
-            btnStart.IsEnabled = true;
+            await ExecutePurgerLogic(isPurgeMode: false);
         }
+
         private async void StartPurge_Click(object sender, RoutedEventArgs e)
         {
-            string root = txtRootPath.Text;
-            totalBytesSaved = 0;
-            UpdateSpaceUI(0);
+            var result = MessageBox.Show("Are you sure you want to permanently delete all files in these recycle bins?",
+                                         "Confirm Purge", MessageBoxButton.YesNo, MessageBoxImage.Warning);
 
-            if (string.IsNullOrEmpty(root) || !Directory.Exists(root))
+            if (result == MessageBoxResult.Yes)
             {
-                MessageBox.Show("Please select a valid root directory first.", "Invalid Path");
-                return;
+                await ExecutePurgerLogic(isPurgeMode: true);
             }
-
-            btnStart.IsEnabled = false;
-            txtLog.Clear();
-            LogToUI("Starting purge process...");
-
-            await Task.Run(() =>
-            {
-                try
-                {
-                    var userDirs = Directory.GetDirectories(root);
-                    foreach (var userDir in userDirs)
-                    {
-                        string userName = Path.GetFileName(userDir);
-                        LogToUI($"Checking user: {userName}");
-
-                        var bins = Directory.GetDirectories(userDir, "$Recycle.Bin", SearchOption.AllDirectories);
-
-                        foreach (var bin in bins)
-                        {
-                            try
-                            {
-                                long binSize = GetDirectorySize(bin);
-                                Directory.Delete(bin, true);
-                                totalBytesSaved += binSize;
-                                UpdateSpaceUI(totalBytesSaved);
-                                LogToUI($" SUCCESS: Deleted {bin} ({FormatBytes(binSize)})");
-
-                            }
-                            catch (Exception ex)
-                            {
-                                LogToUI($" SKIP: Could not delete {bin} (File may be in use)");
-                            }
-                        }
-                    }
-                LogToUI("---FINISHED---");
-            }
-            catch (Exception ex)
-                {
-                LogToUI($"CRITICAL ERROR: {ex.Message}");
-                }
-            });
-        btnStart.IsEnabled = true;
         }
 
-        private void UpdateSpaceUI(long bytes)
-        {
-            Dispatcher.Invoke(() =>
-            {
-                lblTotalSaved.Text = FormatBytes(bytes);
-            });
-        }
-
-        private string FormatBytes(long bytes)
+        private string FormatSize(long bytes)
         {
             string[] Suffix = { "Bytes", "KB", "MB", "GB", "TB" };
-            int i;
+            int i = 0;
             double dblSByte = bytes;
-            for ( i =0; i < Suffix.Length && bytes >= 1024; i++, bytes /= 1024)
+            while (dblSByte >= 1024 && i < Suffix.Length - 1)
             {
-                dblSByte = bytes / 1024.0;
+                i++;
+                dblSByte /= 1024;
             }
             return $"{Math.Round(dblSByte, 2)} {Suffix[i]}";
         }
@@ -167,5 +115,78 @@ namespace AdminToolkit.Pages
             });
         }
 
+        private async Task ExecutePurgerLogic(bool isPurgeMode)
+        {
+            string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
+            string json = File.ReadAllText(configPath);
+            var config = JsonSerializer.Deserialize<DepartmentConfig>(json);
+            var skipList = config.FoldersToSkip ?? new List<string>();
+            string rootPath = txtSelectedPath.Text.Trim();
+            if (!Directory.Exists(rootPath))
+            {
+                MessageBox.Show("Invalid path. Please check the directory and try again.");
+                return;
+            }
+
+            btnScan.IsEnabled = false;
+            btnStart.IsEnabled = false;
+            txtLog.Clear();
+            LogToUI(isPurgeMode ? "!!! STARTING PURGE !!!" : "--- STARTING SCAN ---");
+
+            long totalBytesProcessed = 0;
+
+            await Task.Run(() =>
+            {
+                try
+                {
+                    string[] userFolders = Directory.GetDirectories(rootPath);
+                    LogToUI($"DEBUG: Found {userFolders.Length} user folders in {rootPath}");
+
+                    foreach (string userFolder in userFolders)
+                    {
+                        string folderName = Path.GetFileName(userFolder);
+                        bool shouldSkip = skipList.Any(s => s.Equals(folderName, StringComparison.OrdinalIgnoreCase));
+
+                        if (shouldSkip)
+                        {
+                            LogToUI($"Skipping: {folderName} (on skip list)");
+                            continue;
+                        }
+                        // SEARCH OPTION: We use a try-catch search to find the bin even if it's buried
+                        string[] foundBins = new string[0];
+                        try
+                        {
+                            // This looks for any folder named $RECYCLE.BIN inside the user's directory
+                            foundBins = Directory.GetDirectories(userFolder, "$RECYCLE.BIN", SearchOption.AllDirectories);
+                        }
+                        catch { /* Access Denied on certain subfolders */ }
+
+                        foreach (string recyclePath in foundBins)
+                        {
+                            long size = GetDirectorySize(recyclePath);
+                            totalBytesProcessed += size;
+
+                            if (isPurgeMode && size > 0)
+                            {
+                                try { Directory.Delete(recyclePath, true); }
+                                catch (Exception ex) { LogToUI($"Could not purge {recyclePath}: {ex.Message}"); }
+                            }
+
+                            string userName = Path.GetFileName(userFolder);
+                            LogToUI($"{(isPurgeMode ? "Purged" : "Found")}: {userName} ({FormatSize(size)})");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogToUI($"Critical Error: {ex.Message}");
+                }
+            });
+
+            lblTotalSaved.Text = FormatSize(totalBytesProcessed);
+            LogToUI("Task Complete.");
+            btnScan.IsEnabled = true;
+            btnStart.IsEnabled = true;
+        }
     }
 }
