@@ -11,6 +11,7 @@ namespace AdminToolkit.Pages
 {
     public partial class PurgerPage : Page
     {
+        private DepartmentConfig _config;
         public class DepartmentConfig
         {
             public List<Department> Departments { get; set; }
@@ -32,16 +33,41 @@ namespace AdminToolkit.Pages
         {
             try
             {
-                string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
-                if (!File.Exists(configPath)) return;
+                string json = "";
+                string externalPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
 
-                string json = File.ReadAllText(configPath);
+                // 1. Try to load External File first
+                if (File.Exists(externalPath))
+                {
+                    json = File.ReadAllText(externalPath);
+                    LogToUI("Loaded configuration from external file.");
+                }
+                else
+                {
+                    // 2. Fallback: Load from Embedded Resource
+                    var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+                    // Format is usually: ProjectName.FolderName.FileName.json
+                    string resourceName = "AdminToolkit.appsettings.json";
+
+                    using (Stream stream = assembly.GetManifestResourceStream(resourceName))
+                    {
+                        if (stream == null) throw new Exception("Embedded config not found.");
+                        using (StreamReader reader = new StreamReader(stream))
+                        {
+                            json = reader.ReadToEnd();
+                        }
+                    }
+                    LogToUI("External config missing. Using embedded 'Shadow' config.");
+                }
+
+                // 3. Deserialize and Populate
                 var config = JsonSerializer.Deserialize<DepartmentConfig>(json);
+                _config = config; // Save to a private field for the skip list logic
                 cmbDepartments.ItemsSource = config.Departments;
             }
             catch (Exception ex)
             {
-                LogToUI($"Error loading departments: {ex.Message}");
+                MessageBox.Show("Critical Error loading configuration: " + ex.Message);
             }
         }
 
@@ -117,17 +143,15 @@ namespace AdminToolkit.Pages
 
         private async Task ExecutePurgerLogic(bool isPurgeMode)
         {
-            string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
-            string json = File.ReadAllText(configPath);
-            var config = JsonSerializer.Deserialize<DepartmentConfig>(json);
-            var skipList = config.FoldersToSkip ?? new List<string>();
             string rootPath = txtSelectedPath.Text.Trim();
+
             if (!Directory.Exists(rootPath))
             {
                 MessageBox.Show("Invalid path. Please check the directory and try again.");
                 return;
             }
 
+            // 1. Prepare UI
             btnScan.IsEnabled = false;
             btnStart.IsEnabled = false;
             txtLog.Clear();
@@ -139,27 +163,30 @@ namespace AdminToolkit.Pages
             {
                 try
                 {
+                    // Use the _config we loaded at startup
+                    var skipList = _config?.FoldersToSkip ?? new List<string>();
+
                     string[] userFolders = Directory.GetDirectories(rootPath);
-                    LogToUI($"DEBUG: Found {userFolders.Length} user folders in {rootPath}");
+                    LogToUI($"DEBUG: Found {userFolders.Length} folders in {rootPath}");
 
                     foreach (string userFolder in userFolders)
                     {
                         string folderName = Path.GetFileName(userFolder);
-                        bool shouldSkip = skipList.Any(s => s.Equals(folderName, StringComparison.OrdinalIgnoreCase));
 
-                        if (shouldSkip)
+                        // Check Skip List
+                        if (skipList.Any(s => s.Equals(folderName, StringComparison.OrdinalIgnoreCase)))
                         {
-                            LogToUI($"Skipping: {folderName} (on skip list)");
+                            LogToUI($"Skipping: {folderName} (Protected)");
                             continue;
                         }
-                        // SEARCH OPTION: We use a try-catch search to find the bin even if it's buried
+
                         string[] foundBins = new string[0];
                         try
                         {
-                            // This looks for any folder named $RECYCLE.BIN inside the user's directory
+                            // Recursive search for the bin
                             foundBins = Directory.GetDirectories(userFolder, "$RECYCLE.BIN", SearchOption.AllDirectories);
                         }
-                        catch { /* Access Denied on certain subfolders */ }
+                        catch { /* Access Denied to subfolders */ }
 
                         foreach (string recyclePath in foundBins)
                         {
@@ -168,12 +195,20 @@ namespace AdminToolkit.Pages
 
                             if (isPurgeMode && size > 0)
                             {
-                                try { Directory.Delete(recyclePath, true); }
-                                catch (Exception ex) { LogToUI($"Could not purge {recyclePath}: {ex.Message}"); }
+                                try
+                                {
+                                    Directory.Delete(recyclePath, true);
+                                    LogToUI($"Purged: {folderName} ({FormatSize(size)})");
+                                }
+                                catch (Exception ex)
+                                {
+                                    LogToUI($"Could not purge {folderName}: {ex.Message}");
+                                }
                             }
-
-                            string userName = Path.GetFileName(userFolder);
-                            LogToUI($"{(isPurgeMode ? "Purged" : "Found")}: {userName} ({FormatSize(size)})");
+                            else if (!isPurgeMode && size > 0)
+                            {
+                                LogToUI($"Found: {folderName} ({FormatSize(size)})");
+                            }
                         }
                     }
                 }
@@ -183,10 +218,13 @@ namespace AdminToolkit.Pages
                 }
             });
 
-            lblTotalSaved.Text = FormatSize(totalBytesProcessed);
-            LogToUI("Task Complete.");
-            btnScan.IsEnabled = true;
-            btnStart.IsEnabled = true;
+            // 2. Wrap up UI
+            Dispatcher.Invoke(() => {
+                lblTotalSaved.Text = FormatSize(totalBytesProcessed);
+                LogToUI("Task Complete.");
+                btnScan.IsEnabled = true;
+                btnStart.IsEnabled = true;
+            });
         }
     }
 }
