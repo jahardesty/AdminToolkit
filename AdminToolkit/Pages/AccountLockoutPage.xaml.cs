@@ -130,6 +130,21 @@ namespace AdminToolkit.Pages
                 MessageBox.Show($"Failed to unlock account: {ex.Message}", "Permission Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+        private void Help_Click(object sender, RoutedEventArgs e)
+        {
+            string title = "Account Lock Tool Guide";
+
+            // Using the @ symbol allows for easy multi-line strings
+            string instructions = @"The Account Lock tool scans active directory for users who have been or are currently locked.
+
+            HOW TO USE:
+            • Input a username to check for only them, otherwise, leave it blank to search all user accounts. 
+            • If you find a user that is locked, you can right-click, and unlock their account directly in the window.";
+
+            var helpWin = new ReadmeWindow(title, instructions);
+            helpWin.Owner = Window.GetWindow(this); // Centers it to the main app
+            helpWin.ShowDialog();
+        }
 
     }
 }

@@ -226,5 +226,26 @@ namespace AdminToolkit.Pages
                 btnStart.IsEnabled = true;
             });
         }
+        private void Help_Click(object sender, RoutedEventArgs e)
+        {
+            string title = "Recycle Bin Purge Guide";
+
+            // Using the @ symbol allows for easy multi-line strings
+            string instructions = @"The Purger tool scans redirected user folders for hidden $RECYCLE.BIN directories.
+
+HOW TO USE:
+• Choose a department from the list to set the path.
+• 'Scan Only' will calculate potential space savings without deleting anything.
+• 'Purge All' will permanently empty the bins.
+
+SAFETY:
+• Folders listed in your 'FoldersToSkip' config will be ignored.
+• The tool automatically skips folders you don't have permissions to access.";
+
+            // Pass the strings to your upgraded window
+            var helpWin = new ReadmeWindow(title, instructions);
+            helpWin.Owner = Window.GetWindow(this); // Centers it to the main app
+            helpWin.ShowDialog();
+        }
     }
 }

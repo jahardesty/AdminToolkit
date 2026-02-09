@@ -13,24 +13,21 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Margin="0,0,0,20">
-            <TextBlock Text="Recycle Bin Purger" FontSize="18" FontWeight="Bold" Margin="0,0,0,15"/>
+        <Grid Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock Text="Recycle Bin Purger" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+            <Button Content="?" Width="30" Height="30" HorizontalAlignment="Right" VerticalAlignment="Center" 
+                Background="#FF757575" FontWeight="Bold" Cursor="Hand" ToolTip="Click for instructions" Click="Help_Click"/>
+        </Grid>
 
+        <StackPanel Grid.Row="1" Margin="0,0,0,20">
             <DockPanel Margin="0,0,0,10">
-                <TextBlock Text="Redirected Folders Root Path:" 
-                           VerticalAlignment="Center" 
-                           FontWeight="Bold" 
-                           Margin="0,0,10,0"/>
-
-                <ComboBox x:Name="cmbDepartments" 
-                          DisplayMemberPath="Name" 
-                          SelectedValuePath="Path" 
-                          SelectionChanged="CmbDepartments_SelectionChanged"
-                          Width="250" 
-                          HorizontalAlignment="Left"/>
+                <TextBlock Text="Redirected Folders Root Path:" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,10,0"/>
+                <ComboBox x:Name="cmbDepartments" DisplayMemberPath="Name" SelectedValuePath="Path" 
+                      SelectionChanged="CmbDepartments_SelectionChanged" Width="250" HorizontalAlignment="Left"/>
             </DockPanel>
 
             <TextBlock Text="Example: \\Server\Redirected$" Foreground="Gray" FontSize="11" Margin="0,0,0,5"/>
@@ -39,34 +36,27 @@
                 <Button Content="Browse" Click="Browse_Click" DockPanel.Dock="Right" Width="75" Margin="5,0,0,0"/>
                 <TextBox x:Name="txtSelectedPath" IsReadOnly="True" Background="#F0F0F0" VerticalContentAlignment="Center" Padding="5,2"/>
             </DockPanel>
+        </StackPanel>
 
-         </StackPanel>
-
-        <Grid Grid.Row="1" Margin="0,0,0,10">
+        <Grid Grid.Row="2" Margin="0,0,0,10">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-
             <Button x:Name="btnScan" Grid.Column="0" Content="Scan Only" Click="StartScan_Click"
-                    Height="45" Margin="0,0,5,0" Background="#515151" Foreground="White"/>
-
+                Height="45" Margin="0,0,5,0" Background="#515151" Foreground="White"/>
             <Button x:Name="btnStart" Grid.Column="1" Content="Purge All Recycle Bins" Click="StartPurge_Click" 
-                    Height="45" Margin="5,0,0,0" Background="#D13438" Foreground="White"/>
+                Height="45" Margin="5,0,0,0" Background="#D13438" Foreground="White"/>
         </Grid>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,5,0,5">
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,5,0,5">
             <TextBlock Text="Total Space Recovered: " FontWeight="Bold"/>
             <TextBlock x:Name="lblTotalSaved" Text="0 MB" Foreground="#007ACC" FontWeight="Bold"/>
         </StackPanel>
 
-        <TextBlock Grid.Row="3" Text="Activity Log:" Margin="0,10,0,5" FontWeight="Bold"/>
-        <TextBox x:Name="txtLog" Grid.Row="4" 
-                 IsReadOnly="True" 
-                 VerticalScrollBarVisibility="Auto" 
-                 HorizontalScrollBarVisibility="Auto"
-                 FontFamily="Consolas" 
-                 Background="#F3F3F3"
-                 Padding="5"/>
+        <TextBlock Grid.Row="4" Text="Activity Log:" Margin="0,10,0,5" FontWeight="Bold"/>
+
+        <TextBox x:Name="txtLog" Grid.Row="5" IsReadOnly="True" VerticalScrollBarVisibility="Auto" 
+             HorizontalScrollBarVisibility="Auto" FontFamily="Consolas" Background="#F3F3F3" Padding="5"/>
     </Grid>
 </Page>

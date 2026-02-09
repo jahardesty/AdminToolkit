@@ -34,8 +34,12 @@ namespace AdminToolkit.Pages
 
         private void OpenReadme_Click(object sender, RoutedEventArgs e)
         {
-            // Changed ReadMeWindow to ReadmeWindow
-            ReadmeWindow readme = new ReadmeWindow();
+            string title = "Admin Toolkit Overview";
+            string message = "Welcome to the Admin Toolkit.\n\n" +
+                             "• Use the sidebar to navigate between tools.\n" +
+                             "• Each page has its own '?' button for specific instructions.";
+
+            ReadmeWindow readme = new ReadmeWindow(title, message);
             readme.Owner = Window.GetWindow(this);
             readme.ShowDialog();
         }
