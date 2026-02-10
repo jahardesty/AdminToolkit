@@ -62,5 +62,17 @@ namespace AdminToolkit.Pages
                 MessageBox.Show("DN copied to clipboard!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
+        private void Help_Click(object sender, RoutedEventArgs e)
+        {
+            string title = "AD Search Tool Guide";
+            string instructions = "This tool is simple. Input the username, click search, and it will output the Distinguished name for that user.\n\n" +
+
+                                   "WHY?\n" +
+                                   "• Add a user to a sender approved list in AD for distribuition groups, this gives you the DN easily.";
+
+            var helpWin = new ReadmeWindow(title, instructions);
+            helpWin.Owner = Window.GetWindow(this); // Centers it to the main app
+            helpWin.ShowDialog();
+        }
     }
 }

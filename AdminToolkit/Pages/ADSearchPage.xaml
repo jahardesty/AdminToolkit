@@ -5,25 +5,64 @@
       Background="{StaticResource PageBackgroundBrush}">
 
     <Grid Margin="20">
-        <StackPanel>
-            <TextBlock Text="Search Active Directory User" FontSize="18" FontWeight="Bold" Margin="0,0,0,10" KeyDown="TxtSearchUser_KeyDown"/>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 
-            <TextBlock Text="Enter SamAccountName (Username):" Margin="0,5,0,5"/>
+        <Grid Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock Text="Search Active Directory User" 
+                       FontSize="18" 
+                       FontWeight="Bold" 
+                       VerticalAlignment="Center" 
+                       HorizontalAlignment="Left"/>
+
+            <Button Content="?" 
+                    Width="30" 
+                    Height="30" 
+                    HorizontalAlignment="Right" 
+                    VerticalAlignment="Center" 
+                    Background="#FF757575" 
+                    Foreground="White" 
+                    FontWeight="Bold" 
+                    Cursor="Hand" 
+                    ToolTip="Click for instructions" 
+                    Click="Help_Click"/>
+        </Grid>
+
+        <StackPanel Grid.Row="1">
+            <TextBlock Text="Enter SamAccountName (Username):" Margin="0,5,0,5" FontWeight="SemiBold"/>
             <StackPanel Orientation="Horizontal">
-                <TextBox x:Name="txtSearchUser" Width="300" HorizontalAlignment="Left" Margin="0,0,10,0"/>
-                <Button Content="Search" Click="SearchUser_Click" Width="100"/>
+                <TextBox x:Name="txtSearchUser" 
+                         Width="300" 
+                         HorizontalAlignment="Left" 
+                         Margin="0,0,10,0" 
+                         VerticalContentAlignment="Center" 
+                         KeyDown="TxtSearchUser_KeyDown"/>
+                <Button Content="Search" Click="SearchUser_Click" Width="100" Height="30" IsDefault="True"/>
             </StackPanel>
 
             <Separator Margin="0,20,0,20"/>
+        </StackPanel>
 
+        <StackPanel Grid.Row="2">
             <TextBlock Text="Distinguished Name (DN):" FontWeight="Bold" Margin="0,0,0,5"/>
-            <Grid>
-                <TextBox x:Name="txtResultDN" IsReadOnly="True" Background="#EEE" Padding="10" TextWrapping="Wrap"/>
-            </Grid>
+            <TextBox x:Name="txtResultDN" 
+                     IsReadOnly="True" 
+                     Background="#EEE" 
+                     Padding="10" 
+                     TextWrapping="Wrap" 
+                     MinHeight="60"/>
 
-            <Button x:Name="btnCopy" Content="📋 Copy to Clipboard" 
-                    HorizontalAlignment="Right" Margin="0,10,0,0" 
-                    Width="150" IsEnabled="False" Click="CopyDN_Click"/>
+            <Button x:Name="btnCopy" 
+                    Content="📋 Copy to Clipboard" 
+                    HorizontalAlignment="Right" 
+                    Margin="0,10,0,0" 
+                    Width="150" 
+                    Height="30"
+                    IsEnabled="False" 
+                    Click="CopyDN_Click"/>
         </StackPanel>
     </Grid>
 </Page>

@@ -2,9 +2,13 @@
 using System.Diagnostics;
 using System.DirectoryServices.AccountManagement;
 using System.IO;
+using System.Security.Principal;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Media;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace AdminToolkit.Pages
 {
@@ -222,182 +226,27 @@ namespace AdminToolkit.Pages
             // Cleanup: Delete the now-empty source directory
             // Directory.Delete(source, true);
         }
-    }
-}
-
-/*
-using System.DirectoryServices.AccountManagement;
-using System.IO;
-using System.Windows;
-using System;
-using System.Threading.Tasks;
-using System.Windows.Controls;
-
-
-namespace AdminToolkit.Pages
-{
-    public partial class ArchiveUserPage : Page
-    {
-        public ArchiveUserPage()
+        private void Help_Click(object sender, RoutedEventArgs e)
         {
-            InitializeComponent();
-        }
+            string title = "Archive User Tool Guide";
+            string instructions =
+                "This tool searches for users that are either deleted or deactivated.\n\n" +
 
-        private void LogToUI(string message)
-        {
-            Dispatcher.Invoke(() =>
-            {
-                txtLog.AppendText($"{DateTime.Now:HH:mm:ss} - {message}{Environment.NewLine}");
-                txtLog.ScrollToEnd();
-            });
-        }
-        private async void StartScan_Click(object sender, RoutedEventArgs e)
-        {
-            int days = int.Parse(txtDays.Text);
-            string source = txtSourcePath.Text;
-            if (!int.TryParse(txtDays.Text, out int daysThreshold))
+                "How to use:\n\n" +
+                "• Source (Redirected Folders): Root folder where user folders live.\n" +
+                "• Destination: Where you want the archived data to go.\n" +
+                "• Days: The threshold for 'Inactive' users based on their last logon in AD.\n\n " +
+                "Buttons:\n" +
+                "• Scan for Deleted: Finds folders where the user account no longer exists in AD.\n " +
+                "• Scan for Inactive: Finds users who haven't logged in for the specified number of days.\n " +
+                "• Archive: Begins moving the identified folders to the destination.\n\n" +
+                "Safety:\n\n" +
+                "• This tool performs a COPY and then a DELETE to ensure data integrity.\n" +
+                "• Folders like 'Public' or 'Administrator' are automatically excluded.";
 
-            {
-                MessageBox.Show("Please enter a valid number for days.");
-                return;
-            }
-
-            txtLog.Clear();
-            LogToUI($"Searching for users who haven't logged in for {days} days...");
-
-            await Task.Run(() =>
-            {
-                using (var context = new PrincipalContext(ContextType.Domain))
-                {
-                    var userPrincipal = new UserPrincipal(context);
-                    var searcher = new PrincipalSearcher(userPrincipal);
-
-                    /*
-                    foreach (var result in searcher.FindAll())
-                    {
-                        var user = result as UserPrincipal;
-                        if (user != null && user.LastLogon != null)
-                        {
-                            //LogToUI($"Check: {user.SamAccountName} | Last login: {user.LastLogon}");
-                            LogToUI($"Found user {user.SamAccountName}. Days since login: {(user.LastLogon.HasValue ? Math.Round((DateTime.Now - user.LastLogon.Value).TotalDays).ToString() : "NULL")}");
-                            TimeSpan inactiveFor = DateTime.Now - user.LastLogon.Value;
-                            if (inactiveFor.TotalDays > days)
-                            {
-                                // Check if they have a folder in the source path
-                                string userFolderPath = Path.Combine(source, user.SamAccountName);
-                                if (Directory.Exists(userFolderPath))
-                                {
-                                    LogToUI($"FOUND: {user.SamAccountName} (Last login: {user.LastLogon})");
-                                }
-                            }
-                        }
-                    
-                    }
-                    */
-/*
-foreach (var result in searcher.FindAll())
-                    {
-                        var user = result as UserPrincipal;
-                        if (user != null && user.LastLogon.HasValue)
-                        {
-                            // 1. Calculate and round the days
-                            double inactiveDays = (DateTime.Now - user.LastLogon.Value).TotalDays;
-                            int roundedDays = (int)Math.Round(inactiveDays);
-
-                            // 2. Filter based on your txtDays input
-                            if (roundedDays >= daysThreshold)
-                            {
-                                // 3. Check if the folder actually exists
-                                string userFolderPath = Path.Combine(source, user.SamAccountName);
-
-                                if (Directory.Exists(userFolderPath))
-                                {
-                                    LogToUI($"MATCH: {user.SamAccountName} | Inactive: {roundedDays} days | Path: {userFolderPath}");
-                                }
-                                else
-                                {
-                                    // Optional: Log users who are old but don't have a folder
-                                    // LogToUI($"INFO: {user.SamAccountName} is old ({roundedDays} days) but has no folder.");
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-        private async void StartArchive_Click(object sender, RoutedEventArgs e)
-        {
-            string source = txtSourcePath.Text;
-            string archive = txtArchivePath.Text;
-            int days = int.Parse(txtDays.Text);
-
-            if (!Directory.Exists(source) || !Directory.Exists(archive))
-            {
-                MessageBox.Show("Please ensure both Source and Archive paths exist.");
-                return;
-            }
-
-            btnArchive.IsEnabled = false;
-            LogToUI("--- ARCHIVE OPERATION STARTED ---");
-
-            await Task.Run(() =>
-            {
-                using (var context = new PrincipalContext(ContextType.Domain))
-                {
-                    var userPrincipal = new UserPrincipal(context);
-                    var searcher = new PrincipalSearcher(userPrincipal);
-
-                    foreach (var result in searcher.FindAll())
-                    {
-                        var user = result as UserPrincipal;
-                        if (user != null && user.LastLogon != null)
-                        {
-                            if ((DateTime.Now - user.LastLogon.Value).TotalDays > days)
-                            {
-                                string userSource = Path.Combine(source, user.SamAccountName);
-                                string userDest = Path.Combine(archive, user.SamAccountName);
-
-                                if (Directory.Exists(userSource))
-                                {
-                                    try
-                                    {
-                                        LogToUI($"Moving {user.SamAccountName}...");
-                                        // This is the "Safe Move"
-                                        // If moving across drives, we use this custom logic:
-                                        MoveDirectory(userSource, userDest);
-                                        LogToUI($"SUCCESS: Archived {user.SamAccountName}");
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        LogToUI($"ERROR: Failed to move {user.SamAccountName}: {ex.Message}");
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                LogToUI("--- ARCHIVE OPERATION COMPLETE ---");
-            });
-            btnArchive.IsEnabled = true;
-        }
-
-        // Helper to handle moves across different drives (D: to E:)
-        private void MoveDirectory(string source, string target)
-        {
-            if (!Directory.Exists(target)) Directory.CreateDirectory(target);
-
-            foreach (var file in Directory.GetFiles(source, "*", SearchOption.AllDirectories))
-            {
-                string targetFile = file.Replace(source, target);
-                string targetDir = Path.GetDirectoryName(targetFile);
-                if (!Directory.Exists(targetDir)) Directory.CreateDirectory(targetDir);
-
-                File.Move(file, targetFile, true);
-            }
-            // Delete original folder after all files are moved
-            Directory.Delete(source, true);
+            var helpWin = new ReadmeWindow(title, instructions);
+            helpWin.Owner = Window.GetWindow(this); // Centers it to the main app
+            helpWin.ShowDialog();
         }
     }
 }
-
-*/

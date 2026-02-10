@@ -7,13 +7,21 @@
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Margin="0,0,0,20">
-            <TextBlock Text="Lockout Source Tracker" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+        <Grid Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock Text="Account Lockout Search" FontSize="18" FontWeight="Bold" 
+                       HorizontalAlignment="Left" VerticalAlignment="Center"/>
 
+            <Button Content="?" Width="30" Height="30" HorizontalAlignment="Right" VerticalAlignment="Center" 
+                    Background="#FF757575" Foreground="White" FontWeight="Bold" Cursor="Hand" 
+                    ToolTip="Click for instructions" Click="Help_Click"/>
+        </Grid>
+
+        <Border Grid.Row="1" Background="#05000000" CornerRadius="5" Padding="10" Margin="0,0,0,15">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -21,26 +29,23 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0">
-                    <TextBlock Text="Username (Leave blank for ALL):" Margin="0,0,0,5"/>
+                    <TextBlock Text="Username (Leave blank for ALL):" Margin="0,0,0,5" FontWeight="SemiBold"/>
                     <StackPanel Orientation="Horizontal">
-                        <TextBox x:Name="txtLockoutUser" Width="200" Margin="0,0,10,0" KeyDown="TxtLockoutUser_KeyDown"/>
-                        <Button x:Name="btnCheckLockout" Content="Search Events" Click="CheckLockout_Click" Width="120" IsDefault="True"/>
+                        <TextBox x:Name="txtLockoutUser" Width="200" Margin="0,0,10,0" VerticalContentAlignment="Center" KeyDown="TxtLockoutUser_KeyDown"/>
+                        <Button x:Name="btnCheckLockout" Content="Search Events" Click="CheckLockout_Click" Width="120" Height="30" IsDefault="True"/>
                     </StackPanel>
                 </StackPanel>
 
-                <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Margin="20,0,0,0">
-                    <TextBlock Text="Days to look back:" Margin="0,0,0,5"/>
-                    <TextBox x:Name="txtDaysBack" Width="50" Text="1" HorizontalAlignment="Left" Padding="3"/>
+                <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Margin="25,0,0,0">
+                    <TextBlock Text="Days to look back:" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                    <TextBox x:Name="txtDaysBack" Width="50" Text="1" HorizontalAlignment="Left" Padding="3" VerticalContentAlignment="Center"/>
                 </StackPanel>
             </Grid>
-        </StackPanel>
-        <StackPanel x:Name="statusArea" Grid.Row="2" Orientation="Horizontal" Visibility="Collapsed" Margin="0,10,0,0">
-            <ProgressBar IsIndeterminate="True" Width="20" Height="20" Margin="0,0,10,0"/>
-            <TextBlock x:Name="lblStatus" Text="Scanning Domain Controllers..." VerticalAlignment="Center" Foreground="#555"/>
-        </StackPanel>
+        </Border>
 
-        <DataGrid x:Name="dgResults" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" 
-          Background="White" RowHeaderWidth="0" GridLinesVisibility="Horizontal">
+        <DataGrid x:Name="dgResults" Grid.Row="2" AutoGenerateColumns="False" IsReadOnly="True" 
+                  Background="White" RowHeaderWidth="0" GridLinesVisibility="Horizontal"
+                  BorderBrush="#DDD" BorderThickness="1">
             <DataGrid.ContextMenu>
                 <ContextMenu>
                     <MenuItem Header="Unlock User Account" Click="UnlockUser_Click">
@@ -58,5 +63,10 @@
                 <DataGridTextColumn Header="DC" Binding="{Binding DC}" Width="120"/>
             </DataGrid.Columns>
         </DataGrid>
+
+        <StackPanel x:Name="statusArea" Grid.Row="3" Orientation="Horizontal" Visibility="Collapsed" Margin="0,10,0,0">
+            <ProgressBar IsIndeterminate="True" Width="20" Height="20" Margin="0,0,10,0"/>
+            <TextBlock x:Name="lblStatus" Text="Scanning Domain Controllers..." VerticalAlignment="Center" Foreground="#555"/>
+        </StackPanel>
     </Grid>
 </Page>
