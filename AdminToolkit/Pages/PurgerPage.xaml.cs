@@ -5,69 +5,18 @@ using Path = System.IO.Path;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Text.Json;
+using System.Linq; 
 
 namespace AdminToolkit.Pages
 {
     public partial class PurgerPage : Page
     {
-        private DepartmentConfig _config;
-        public class DepartmentConfig
-        {
-            public List<Department> Departments { get; set; }
-            public List<string> FoldersToSkip { get; set; } = new List<string>();
-        }
-        public class Department
-        {
-            public string Name { get; set; }
-            public string Path { get; set; }
-        }
-
         public PurgerPage()
         {
             InitializeComponent();
-            LoadDepartments();
-        }
-
-        private void LoadDepartments()
-        {
-            try
+            if (ConfigManager.AppSettings != null)
             {
-                string json = "";
-                string externalPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
-
-                // 1. Try to load External File first
-                if (File.Exists(externalPath))
-                {
-                    json = File.ReadAllText(externalPath);
-                    LogToUI("Loaded configuration from external file.");
-                }
-                else
-                {
-                    // 2. Fallback: Load from Embedded Resource
-                    var assembly = System.Reflection.Assembly.GetExecutingAssembly();
-                    // Format is usually: ProjectName.FolderName.FileName.json
-                    string resourceName = "AdminToolkit.appsettings.json";
-
-                    using (Stream stream = assembly.GetManifestResourceStream(resourceName))
-                    {
-                        if (stream == null) throw new Exception("Embedded config not found.");
-                        using (StreamReader reader = new StreamReader(stream))
-                        {
-                            json = reader.ReadToEnd();
-                        }
-                    }
-                    LogToUI("External config missing. Using embedded 'Shadow' config.");
-                }
-
-                // 3. Deserialize and Populate
-                var config = JsonSerializer.Deserialize<DepartmentConfig>(json);
-                _config = config; // Save to a private field for the skip list logic
-                cmbDepartments.ItemsSource = config.Departments;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Critical Error loading configuration: " + ex.Message);
+                cmbDepartments.ItemsSource = ConfigManager.AppSettings.Departments;
             }
         }
 
@@ -151,7 +100,6 @@ namespace AdminToolkit.Pages
                 return;
             }
 
-            // 1. Prepare UI
             btnScan.IsEnabled = false;
             btnStart.IsEnabled = false;
             txtLog.Clear();
@@ -163,17 +111,15 @@ namespace AdminToolkit.Pages
             {
                 try
                 {
-                    // Use the _config we loaded at startup
-                    var skipList = _config?.FoldersToSkip ?? new List<string>();
+                    // REACHING INTO THE GLOBAL CONFIG HERE
+                    var skipList = ConfigManager.AppSettings?.FoldersToSkip ?? new List<string>();
 
                     string[] userFolders = Directory.GetDirectories(rootPath);
-                    LogToUI($"DEBUG: Found {userFolders.Length} folders in {rootPath}");
 
                     foreach (string userFolder in userFolders)
                     {
                         string folderName = Path.GetFileName(userFolder);
 
-                        // Check Skip List
                         if (skipList.Any(s => s.Equals(folderName, StringComparison.OrdinalIgnoreCase)))
                         {
                             LogToUI($"Skipping: {folderName} (Protected)");
@@ -183,10 +129,9 @@ namespace AdminToolkit.Pages
                         string[] foundBins = new string[0];
                         try
                         {
-                            // Recursive search for the bin
                             foundBins = Directory.GetDirectories(userFolder, "$RECYCLE.BIN", SearchOption.AllDirectories);
                         }
-                        catch { /* Access Denied to subfolders */ }
+                        catch { }
 
                         foreach (string recyclePath in foundBins)
                         {
@@ -202,7 +147,7 @@ namespace AdminToolkit.Pages
                                 }
                                 catch (Exception ex)
                                 {
-                                    LogToUI($"Could not purge {folderName}: {ex.Message}");
+                                    LogToUI($"Could not purge {userFolder}: {ex.Message}");
                                 }
                             }
                             else if (!isPurgeMode && size > 0)
@@ -218,7 +163,6 @@ namespace AdminToolkit.Pages
                 }
             });
 
-            // 2. Wrap up UI
             Dispatcher.Invoke(() => {
                 lblTotalSaved.Text = FormatSize(totalBytesProcessed);
                 LogToUI("Task Complete.");
@@ -226,11 +170,10 @@ namespace AdminToolkit.Pages
                 btnStart.IsEnabled = true;
             });
         }
+
         private void Help_Click(object sender, RoutedEventArgs e)
         {
             string title = "Recycle Bin Purge Guide";
-
-            // Using the @ symbol allows for easy multi-line strings
             string instructions = @"The Purger tool scans redirected user folders for hidden $RECYCLE.BIN directories.
 
 HOW TO USE:
@@ -242,9 +185,8 @@ SAFETY:
 • Folders listed in your 'FoldersToSkip' config will be ignored.
 • The tool automatically skips folders you don't have permissions to access.";
 
-            // Pass the strings to your upgraded window
             var helpWin = new ReadmeWindow(title, instructions);
-            helpWin.Owner = Window.GetWindow(this); // Centers it to the main app
+            helpWin.Owner = Window.GetWindow(this);
             helpWin.ShowDialog();
         }
     }

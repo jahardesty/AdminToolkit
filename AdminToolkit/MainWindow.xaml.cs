@@ -43,6 +43,11 @@ namespace AdminToolkit
             MainFrame.Navigate(new Pages.WelcomePage());
         }
 
+        private void NavQuickActionsPage_Click(object sender, RoutedEventArgs e)
+        {
+            MainFrame.Navigate(new Pages.QuickActionsPage());
+        }
+
         protected override void OnClosed(System.EventArgs e)
         {
             Application.Current.Shutdown();

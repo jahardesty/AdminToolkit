@@ -2,21 +2,35 @@
 using System.Diagnostics;
 using System.DirectoryServices.AccountManagement;
 using System.IO;
-using System.Security.Principal;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Media;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace AdminToolkit.Pages
 {
     public partial class ArchiveUserPage : Page
     {
+        // Notice: The Classes and _config field are GONE. 
+        // We use ConfigManager.AppSettings instead.
+
         public ArchiveUserPage()
         {
             InitializeComponent();
+
+            // Populate the dropdown from our Shared Config
+            if (ConfigManager.AppSettings != null)
+            {
+                cmbDepartments.ItemsSource = ConfigManager.AppSettings.Departments;
+            }
+        }
+
+        private void CmbDepartments_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (cmbDepartments.SelectedValue != null)
+            {
+                txtSourcePath.Text = cmbDepartments.SelectedValue.ToString();
+            }
         }
 
         private void LogToUI(string message)
@@ -26,6 +40,24 @@ namespace AdminToolkit.Pages
                 txtLog.AppendText($"{DateTime.Now:HH:mm:ss} - {message}{Environment.NewLine}");
                 txtLog.ScrollToEnd();
             });
+        }
+
+        private void BrowseArchive_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new Microsoft.Win32.OpenFolderDialog
+            {
+                Title = "Select Archive Destination"
+            };
+            if (!string.IsNullOrWhiteSpace(txtArchivePath.Text) && System.IO.Directory.Exists(txtArchivePath.Text))
+            {
+                dialog.InitialDirectory = txtArchivePath.Text;
+            }
+
+            if (dialog.ShowDialog() == true)
+            {
+                txtArchivePath.Text = dialog.FolderName;
+                LogToUI($"Archive destination set to: {dialog.FolderName}");
+            }
         }
 
         private async void StartScan_Click(object sender, RoutedEventArgs e)
@@ -44,6 +76,8 @@ namespace AdminToolkit.Pages
             {
                 try
                 {
+                    var skipList = ConfigManager.AppSettings?.FoldersToSkip ?? new System.Collections.Generic.List<string>();
+
                     using (var context = new PrincipalContext(ContextType.Domain))
                     {
                         var userPrincipal = new UserPrincipal(context);
@@ -51,12 +85,9 @@ namespace AdminToolkit.Pages
 
                         foreach (var result in searcher.FindAll())
                         {
-                            // Cast as AuthenticablePrincipal to expose LastLogon better
                             var user = result as AuthenticablePrincipal;
-
                             if (user != null && user.LastLogon.HasValue)
                             {
-                                // AD often returns 1/1/1601 for users who have NEVER logged in
                                 if (user.LastLogon.Value.Year < 1700) continue;
 
                                 double inactiveDays = (DateTime.Now - user.LastLogon.Value).TotalDays;
@@ -64,7 +95,10 @@ namespace AdminToolkit.Pages
 
                                 if (roundedDays >= daysThreshold)
                                 {
-                                    string userFolderPath = System.IO.Path.Combine(source, user.SamAccountName);
+                                    // CHECK SKIP LIST
+                                    if (skipList.Any(s => s.Equals(user.SamAccountName, StringComparison.OrdinalIgnoreCase))) continue;
+
+                                    string userFolderPath = Path.Combine(source, user.SamAccountName);
                                     if (Directory.Exists(userFolderPath))
                                     {
                                         LogToUI($"MATCH: {user.SamAccountName} | Inactive: {roundedDays} days | Last: {user.LastLogon.Value:MM/dd/yy}");
@@ -85,22 +119,28 @@ namespace AdminToolkit.Pages
         private async void FindDeletedUsers_Click(object sender, RoutedEventArgs e)
         {
             string source = txtSourcePath.Text;
+            if (!Directory.Exists(source)) { MessageBox.Show("Source path invalid."); return; }
+
             LogToUI("Searching folders with no matching AD user...");
 
             await Task.Run(() =>
             {
+                var skipList = ConfigManager.AppSettings?.FoldersToSkip ?? new System.Collections.Generic.List<string>();
+
                 using (var context = new PrincipalContext(ContextType.Domain))
                 {
                     string[] folders = Directory.GetDirectories(source);
-
                     foreach (var folderPath in folders)
                     {
-                        string folderName = System.IO.Path.GetFileName(folderPath);
+                        string folderName = Path.GetFileName(folderPath);
+
+                        // SKIP LIST CHECK
+                        if (skipList.Any(s => s.Equals(folderName, StringComparison.OrdinalIgnoreCase))) continue;
+
                         var user = UserPrincipal.FindByIdentity(context, folderName);
                         if (user == null)
                         {
                             LogToUI($"DELETED USER FOLDER FOUND: {folderName} (No AD Account)");
-
                         }
                     }
                     LogToUI($" ---- Scan Complete ---- ");
@@ -108,34 +148,11 @@ namespace AdminToolkit.Pages
             });
         }
 
-        private void OpenArchive_Click(object sender, RoutedEventArgs e)
-        {
-            string archivePath = txtArchivePath.Text;
-
-            if (Directory.Exists(archivePath))
-            {
-                // This opens the Windows File Explorer at the specified path
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = archivePath,
-                    UseShellExecute = true,
-                    Verb = "open"
-                });
-
-                LogToUI($"Opening Archive: {archivePath}");
-            }
-            else
-            {
-                MessageBox.Show("The Archive path does not exist or is invalid.");
-            }
-        }
-
         private async void StartArchive_Click(object sender, RoutedEventArgs e)
         {
             string source = txtSourcePath.Text;
             string archive = txtArchivePath.Text;
 
-            // Basic validation
             if (!Directory.Exists(source) || !Directory.Exists(archive))
             {
                 MessageBox.Show("Please ensure both Source and Archive paths exist.");
@@ -145,24 +162,23 @@ namespace AdminToolkit.Pages
             btnArchive.IsEnabled = false;
             archiveProgressBar.Value = 0;
             LogToUI("--- ARCHIVE OPERATION STARTED ---");
-            LogToUI("Searching for folders with no matching Active Directory account...");
 
             await Task.Run(() =>
             {
                 try
                 {
+                    var skipList = ConfigManager.AppSettings?.FoldersToSkip ?? new System.Collections.Generic.List<string>();
+
                     using (var context = new PrincipalContext(ContextType.Domain))
                     {
-                        // 1. Get all directories in the source path
                         string[] folderPaths = Directory.GetDirectories(source);
                         int totalFolders = folderPaths.Length;
                         int processedCount = 0;
 
                         foreach (var folderPath in folderPaths)
                         {
-                            // Get just the folder name (e.g., "jhardesty")
-                            
-                            string folderName = System.IO.Path.GetFileName(folderPath);
+                            string folderName = Path.GetFileName(folderPath);
+                            processedCount++;
                             double percentage = ((double)processedCount / totalFolders) * 100;
 
                             Dispatcher.Invoke(() =>
@@ -171,22 +187,24 @@ namespace AdminToolkit.Pages
                                 lblProgressStatus.Text = $"Processing: {folderName} ({processedCount}/{totalFolders})";
                             });
 
+                            // SKIP LIST CHECK
+                            if (skipList.Any(s => s.Equals(folderName, StringComparison.OrdinalIgnoreCase)))
+                            {
+                                LogToUI($"Skipping Protected Folder: {folderName}");
+                                continue;
+                            }
+
                             try
                             {
-                                // 2. Look for this name in AD
                                 var user = UserPrincipal.FindByIdentity(context, folderName);
-
-                                // 3. If user is null, the account no longer exists in AD
-                                if (user == null)
+                                if (user == null) // Orphan found
                                 {
-                                    string userDest = System.IO.Path.Combine(archive, folderName);
-
+                                    string userDest = Path.Combine(archive, folderName);
                                     LogToUI($"ORPHAN FOUND: {folderName}. Starting copy...");
 
-                                    // 4. Call your helper to move/copy the data
                                     MoveDirectory(folderPath, userDest);
 
-                                    LogToUI($"SUCCESS: Archived orphaned folder: {folderName}");
+                                    LogToUI($"SUCCESS: Archived folder: {folderName}");
                                 }
                             }
                             catch (Exception ex)
@@ -203,49 +221,55 @@ namespace AdminToolkit.Pages
 
                 LogToUI("--- ORPHAN ARCHIVE OPERATION COMPLETE ---");
             });
+
             lblProgressStatus.Text = "Archive Complete";
             btnArchive.IsEnabled = true;
+            btnOpenArchive.Background = System.Windows.Media.Brushes.LightGreen;
         }
 
         private void MoveDirectory(string source, string target)
         {
             if (!Directory.Exists(target)) Directory.CreateDirectory(target);
 
-            // Move all files including those in subdirectories
             foreach (var file in Directory.GetFiles(source, "*", SearchOption.AllDirectories))
             {
                 string targetFile = file.Replace(source, target);
-                string targetDir = System.IO.Path.GetDirectoryName(targetFile);
+                string targetDir = Path.GetDirectoryName(targetFile);
 
                 if (!Directory.Exists(targetDir)) Directory.CreateDirectory(targetDir);
-
                 File.Copy(file, targetFile, true);
-                //File.Move(file, targetFile, true);
             }
-            LogToUI($"TEST: Copied data from {System.IO.Path.GetFileName(source)} to archive.");
-            // Cleanup: Delete the now-empty source directory
-            // Directory.Delete(source, true);
         }
+
+        private void OpenArchive_Click(object sender, RoutedEventArgs e)
+        {
+            if (Directory.Exists(txtArchivePath.Text))
+            {
+                Process.Start(new ProcessStartInfo { FileName = txtArchivePath.Text, UseShellExecute = true });
+            }
+        }
+
         private void Help_Click(object sender, RoutedEventArgs e)
         {
             string title = "Archive User Tool Guide";
-            string instructions =
-                "This tool searches for users that are either deleted or deactivated.\n\n" +
+            string instructions = @"This tool searches for users that are either deleted or deactivated.
 
-                "How to use:\n\n" +
-                "• Source (Redirected Folders): Root folder where user folders live.\n" +
-                "• Destination: Where you want the archived data to go.\n" +
-                "• Days: The threshold for 'Inactive' users based on their last logon in AD.\n\n " +
-                "Buttons:\n" +
-                "• Scan for Deleted: Finds folders where the user account no longer exists in AD.\n " +
-                "• Scan for Inactive: Finds users who haven't logged in for the specified number of days.\n " +
-                "• Archive: Begins moving the identified folders to the destination.\n\n" +
-                "Safety:\n\n" +
-                "• This tool performs a COPY and then a DELETE to ensure data integrity.\n" +
-                "• Folders like 'Public' or 'Administrator' are automatically excluded.";
+HOW TO USE:
+• Select a Department to set the Source path.
+• Destination: Where you want the archived data to go.
+• Days: Threshold for 'Inactive' users based on AD Last Logon.
+
+BUTTONS:
+• Scan for Deleted: Finds folders where the AD account is gone.
+• Scan for Inactive: Finds folders for users who haven't logged in recently.
+• Archive: Copies identified orphan folders to the destination.
+
+SAFETY:
+• Folders in your Skip List (e.g., Administrator) are automatically protected.
+• This performs a COPY; manually verify before deleting source folders.";
 
             var helpWin = new ReadmeWindow(title, instructions);
-            helpWin.Owner = Window.GetWindow(this); // Centers it to the main app
+            helpWin.Owner = Window.GetWindow(this);
             helpWin.ShowDialog();
         }
     }
