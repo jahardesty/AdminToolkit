@@ -11,14 +11,13 @@
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Text="Quick Actions Console" FontSize="20" FontWeight="Bold" Margin="0,0,0,20"/>
-
-        <WrapPanel Grid.Row="1" Orientation="Horizontal">
+        <UniformGrid Grid.Row="1" Columns="3" VerticalAlignment="Top">
             <Button x:Name="btnTestConnections" 
-        Content="🌐 Test DC Connections" 
-        Width="180" Height="60" 
-        Margin="10"
-        Background="#4CAF50" Foreground="White"
-        Click="TestConnections_Click"/>
+                    Content="🌐 Test DC Connections" 
+                    Width="180" Height="60" 
+                    Margin="10"
+                    Background="#4CAF50" Foreground="White"
+                    Click="TestConnections_Click"/>
             <Button x:Name="btnFlushDNS" 
                     Content="⚡ Flush Remote DNS" 
                     Width="180" Height="60" 
@@ -31,7 +30,19 @@
                     Margin="10"
                     Background="#007ACC" Foreground="White"
                     Click="EntraSync_Click"/>
-        </WrapPanel>
+            <Button x:Name="btnCheckDAServices" 
+                    Content="🔍 Desktop Authority Services " 
+                    Width="180" Height="60" 
+                    Margin="10"
+                    Background="#673AB7" Foreground="White"
+                    Click="CheckDAServices_Click"/>
+            <Button x:Name="btnClearLog"
+                    Content="🧹 Clear Log" 
+                    Width="180" Height="60" 
+                    Margin="10"
+                    Background="#FFA28537" Foreground="White"
+                    Click="ClearLog_Click"/>
+        </UniformGrid>
 
         <TextBox x:Name="txtLog" Grid.Row="2" IsReadOnly="True" 
                  VerticalScrollBarVisibility="Auto" Background="#F3F3F3" 

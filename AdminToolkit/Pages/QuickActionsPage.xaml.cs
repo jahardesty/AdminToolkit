@@ -97,7 +97,8 @@ namespace AdminToolkit.Pages
         // This stays exactly as you had it - perfect for thread-safe logging
         private void LogToUI(string message)
         {
-            Dispatcher.Invoke(() => {
+            Dispatcher.Invoke(() =>
+            {
                 txtLog.AppendText($"{DateTime.Now:HH:mm:ss} - {message}{Environment.NewLine}");
                 txtLog.ScrollToEnd();
             });
@@ -169,8 +170,15 @@ namespace AdminToolkit.Pages
                         }
                         else
                         {
-                            // Often fails if the user doesn't have permissions or a sync is already running
-                            LogToUI($"❌ Failed: {error.Trim()}");
+                            if (error.Contains("AAD is busy"))
+                            {
+                                LogToUI($"⚠️ Warning: {syncServer} is currently busy. Try again later.");
+                            }
+                            else
+                            {
+                                LogToUI($"❌ Failed: {error.Trim()}");
+                            }
+
                         }
                     }
                 }
@@ -182,6 +190,98 @@ namespace AdminToolkit.Pages
 
             // 4. Restore UI
             btn.IsEnabled = true;
+        }
+        private async void CheckDAServices_Click(object sender, RoutedEventArgs e)
+        {
+            var servers = ConfigManager.AppSettings?.DesktopAuthorityServers;
+            var services = ConfigManager.AppSettings?.DesktopAuthorityServices;
+            if (servers == null || services == null || servers.Count == 0)
+            {
+                LogToUI("ERROR: Desktop Authority configuration missing in appsettings.json");
+                return;
+            }
+
+            btnCheckDAServices.IsEnabled = false;
+            LogToUI("--- Auditing Desktop Authority Services ---");
+
+            await Task.Run(async () =>
+            {
+                // Convert the C# list into a PowerShell-friendly string: 'Service1','Service2'
+                string serviceList = "'" + string.Join("','", services) + "'";
+
+                foreach (string server in servers)
+                {
+                    if (!await IsServerReachable(server))
+                    {
+                        LogToUI($"⏩ {server}: Offline. Skipping.");
+                        continue;
+                    }
+
+                    try
+                    {
+                        // Define the DA service names here
+                        string[] daServices = { "SLManagerService", "Quest.DesktopAuthority.Execution" };
+                        string services = "'" + string.Join("','", daServices) + "'";
+
+                        // This script checks each service and starts it if it's stopped
+                        string script = $@"
+    $services = {serviceList}
+    foreach ($svcName in $services) {{
+        $s = Get-Service -DisplayName $svcName -ErrorAction SilentlyContinue
+        if ($null -eq $s) {{
+            Write-Output ""NOT_INSTALLED: $svcName""
+        }} elseif ($s.Status -ne 'Running') {{
+            try {{
+                Start-Service -DisplayName $svcName
+                Write-Output ""RESTARTED: $svcName""
+            }} catch {{
+                Write-Output ""FAILED_TO_START: $svcName""
+            }}
+        }} else {{
+            Write-Output ""ALREADY_RUNNING: $svcName""
+        }}
+    }}";
+
+                        ProcessStartInfo psi = new ProcessStartInfo
+                        {
+                            FileName = "powershell.exe",
+                            Arguments = $"-Command \"Invoke-Command -ComputerName {server} -ScriptBlock {{ {script} }}\"",
+                            RedirectStandardOutput = true,
+                            UseShellExecute = false,
+                            CreateNoWindow = true
+                        };
+
+                        using (Process process = Process.Start(psi))
+                        {
+                            string output = process.StandardOutput.ReadToEnd();
+                            process.WaitForExit();
+
+                            LogToUI($"Report for {server}:");
+                            var results = output.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
+
+                            foreach (var result in results)
+                            {
+                                if (result.Contains("ALREADY_RUNNING")) LogToUI($"  ✅ {result}");
+                                else if (result.Contains("RESTARTED")) LogToUI($"  🛠️ {result} (Was stopped, now started)");
+                                else if (result.Contains("FAILED")) LogToUI($"  ❌ {result} (Manual intervention needed)");
+                                else LogToUI($"  ❓ {result}");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        LogToUI($"  ⚠️ {server} Error: {ex.Message}");
+                    }
+                }
+            });
+
+            LogToUI("--- Desktop Authority Audit Complete ---");
+            btnCheckDAServices.IsEnabled = true;
+        }
+
+        private void ClearLog_Click(object sender, RoutedEventArgs e)
+        {
+            txtLog.Clear();
         }
     }
 }

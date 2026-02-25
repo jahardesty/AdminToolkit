@@ -11,6 +11,8 @@ namespace AdminToolkit
         public List<Department> Departments { get; set; } = new List<Department>();
         public List<string> FoldersToSkip { get; set; } = new List<string>();
         public List<string> DomainControllers { get; set; } = new List<string>();
+        public List<string> DesktopAuthorityServers { get; set; } = new List<string>();
+        public List<string> DesktopAuthorityServices { get; set; } = new List<string>();
         public string EntraSyncServer { get; set; }
     }
 
