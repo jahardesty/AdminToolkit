@@ -94,6 +94,8 @@
                         Click="NavArchive_Click" />
                 <Button Content="Account Lockout Search" Style="{StaticResource MenuButtonStyle}"
                         Click="NavAccountLockout_Click" />
+                <Button Content="Server Storage Check" Style="{StaticResource MenuButtonStyle}"
+                        Click="NavServerStorage_Click" />
                 <Button Content="Quick Actions Console" Style="{StaticResource MenuButtonStyle}" 
                         Click="NavQuickActionsPage_Click"/>
             </StackPanel>

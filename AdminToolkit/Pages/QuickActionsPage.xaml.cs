@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Net.NetworkInformation; // IMPORTANT: Add this for Ping
+using System.Net.NetworkInformation;
 
 namespace AdminToolkit.Pages
 {
@@ -14,15 +14,12 @@ namespace AdminToolkit.Pages
         {
             InitializeComponent();
         }
-
-        // --- THE HELPER METHOD YOU WERE MISSING ---
         private async Task<bool> IsServerReachable(string hostName)
         {
             try
             {
                 using (Ping pinger = new Ping())
-                {
-                    // 2000ms (2 second) timeout
+                { 
                     PingReply reply = await pinger.SendPingAsync(hostName, 2000);
                     return reply.Status == IPStatus.Success;
                 }
@@ -46,12 +43,10 @@ namespace AdminToolkit.Pages
             btnFlushDNS.IsEnabled = false;
             LogToUI("--- Starting Multi-Server DNS Flush ---");
 
-            // Added .ConfigureAwait(false) as a best practice for background tasks
             await Task.Run(async () =>
             {
                 foreach (string dc in dcs)
                 {
-                    // Check reachability first
                     if (!await IsServerReachable(dc))
                     {
                         LogToUI($"⏩ Skipping {dc}: Server is unreachable.");
@@ -62,7 +57,6 @@ namespace AdminToolkit.Pages
                     {
                         LogToUI($"Flushing DNS on {dc}...");
 
-                        // Note: Ensure your execution policy allows remote commands
                         string script = $"Invoke-Command -ComputerName {dc} -ScriptBlock {{ ipconfig /flushdns }}";
 
                         ProcessStartInfo psi = new ProcessStartInfo
@@ -94,7 +88,6 @@ namespace AdminToolkit.Pages
             btnFlushDNS.IsEnabled = true;
         }
 
-        // This stays exactly as you had it - perfect for thread-safe logging
         private void LogToUI(string message)
         {
             Dispatcher.Invoke(() =>
@@ -103,8 +96,6 @@ namespace AdminToolkit.Pages
                 txtLog.ScrollToEnd();
             });
         }
-
-        // You can now reuse that IsServerReachable method for your dedicated Test button!
         private async void TestConnections_Click(object sender, RoutedEventArgs e)
         {
             var dcs = ConfigManager.AppSettings?.DomainControllers;
@@ -127,15 +118,12 @@ namespace AdminToolkit.Pages
                 LogToUI("ERROR: No EntraSyncServer defined in appsettings.json.");
                 return;
             }
-
-            // 1. Prepare UI
-            var btn = (Button)sender;
+         var btn = (Button)sender;
             btn.IsEnabled = false;
             LogToUI($"--- Triggering Delta Sync on {syncServer} ---");
 
             await Task.Run(async () =>
-            {
-                // 2. Check reachability
+            { 
                 if (!await IsServerReachable(syncServer))
                 {
                     LogToUI($"❌ {syncServer}: Server unreachable. Sync cancelled.");
@@ -144,8 +132,6 @@ namespace AdminToolkit.Pages
 
                 try
                 {
-                    // 3. Construct the PowerShell script
-                    // We wrap it in an Import-Module just in case the module isn't auto-loaded
                     string script = "Import-Module ADSync; Start-ADSyncSyncCycle -PolicyType Delta";
 
                     ProcessStartInfo psi = new ProcessStartInfo
@@ -188,7 +174,6 @@ namespace AdminToolkit.Pages
                 }
             });
 
-            // 4. Restore UI
             btn.IsEnabled = true;
         }
         private async void CheckDAServices_Click(object sender, RoutedEventArgs e)
@@ -206,7 +191,6 @@ namespace AdminToolkit.Pages
 
             await Task.Run(async () =>
             {
-                // Convert the C# list into a PowerShell-friendly string: 'Service1','Service2'
                 string serviceList = "'" + string.Join("','", services) + "'";
 
                 foreach (string server in servers)
@@ -219,7 +203,6 @@ namespace AdminToolkit.Pages
 
                     try
                     {
-                        // Define the DA service names here
                         string[] daServices = { "SLManagerService", "Quest.DesktopAuthority.Execution" };
                         string services = "'" + string.Join("','", daServices) + "'";
 

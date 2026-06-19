@@ -1,0 +1,95 @@
+﻿<Page x:Class="AdminToolkit.Pages.ServerStoragePage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      Title="ServerStoragePage">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <DockPanel Grid.Row="0" Margin="0,0,0,15">
+            <Button Content="?" Width="30" Height="30" DockPanel.Dock="Right"
+                    Background="#FF757575" Foreground="White" FontWeight="Bold" Cursor="Hand"
+                    ToolTip="Click for instructions" Click="Help_Click"/>
+            <TextBlock Text="Server Storage Check" FontSize="18" FontWeight="Bold"
+                       VerticalAlignment="Center" />
+        </DockPanel>
+
+        <Border Grid.Row="1" Background="#05000000" CornerRadius="5" Padding="10" Margin="0,0,0,15">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Server Name:" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBox x:Name="txtServerName" Width="200" Margin="0,0,10,0" VerticalContentAlignment="Center" KeyDown="TxtServerName_KeyDown"/>
+                        <Button x:Name="btnCheckStorage" Content="Check Storage" Click="CheckStorage_Click" Width="120" Height="30" IsDefault="True"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Margin="25,0,0,0">
+                    <TextBlock Text="Storage Threshold (GB):" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                    <TextBox x:Name="txtStorageThreshold" Width="60" Text="10" HorizontalAlignment="Left" Padding="3" VerticalContentAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <DataGrid x:Name="dgStorageResults" Grid.Row="2" AutoGenerateColumns="False" IsReadOnly="True"
+                  Background="White" RowHeaderWidth="0" GridLinesVisibility="All" VerticalGridLinesBrush="#F0F0F0" HorizontalGridLinesBrush="#DDD"
+                  BorderBrush="#DDD" BorderThickness="1">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Server Name" Binding="{Binding ServerName}" Width="*"/>
+                <DataGridTextColumn Header="IP Address" Binding="{Binding IpAddress}" Width="130"/>
+                <DataGridTextColumn Header="Total Storage (GB)" Binding="{Binding TotalStorage}" Width="130">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="HorizontalAlignment" Value="Right" />
+                            <Setter Property="Margin" Value="0,0,5,0"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="Used Storage (GB)" Binding="{Binding UsedStorage}" Width="130">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="HorizontalAlignment" Value="Right" />
+                            <Setter Property="Margin" Value="0,0,5,0"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="Free Storage (GB)" Binding="{Binding FreeStorage}" Width="130">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="HorizontalAlignment" Value="Right" />
+                            <Setter Property="Margin" Value="0,0,5,0"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="% Used" Binding="{Binding PercentUsed}" Width="90">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="HorizontalAlignment" Value="Right" />
+                            <Setter Property="Margin" Value="0,0,5,0"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <Grid Grid.Row="3" MinHeight="30" Margin="0,5,0,0">
+            <StackPanel x:Name="statusArea" Orientation="Horizontal" Visibility="Collapsed" VerticalAlignment="Center">
+                <ProgressBar IsIndeterminate="True" Width="16" Height="16" Margin="0,0,10,0"/>
+                <TextBlock x:Name="lblStatus" Text="Scanning storage disks..." VerticalAlignment="Center" Foreground="#555" DataContext="{Binding}"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Page>

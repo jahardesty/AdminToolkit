@@ -43,6 +43,11 @@ namespace AdminToolkit
             MainFrame.Navigate(new Pages.WelcomePage());
         }
 
+        private void NavServerStorage_Click(object sender, RoutedEventArgs e)
+        {
+            MainFrame.Navigate(new Pages.ServerStoragePage());
+        }
+
         private void NavQuickActionsPage_Click(object sender, RoutedEventArgs e)
         {
             MainFrame.Navigate(new Pages.QuickActionsPage());

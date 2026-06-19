@@ -11,14 +11,11 @@ namespace AdminToolkit.Pages
 {
     public partial class ArchiveUserPage : Page
     {
-        // Notice: The Classes and _config field are GONE. 
-        // We use ConfigManager.AppSettings instead.
 
         public ArchiveUserPage()
         {
             InitializeComponent();
 
-            // Populate the dropdown from our Shared Config
             if (ConfigManager.AppSettings != null)
             {
                 cmbDepartments.ItemsSource = ConfigManager.AppSettings.Departments;
