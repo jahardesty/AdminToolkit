@@ -52,6 +52,11 @@ namespace AdminToolkit
         {
             MainFrame.Navigate(new Pages.QuickActionsPage());
         }
+        
+        private void NavAppDataBackup_Click(object sender, RoutedEventArgs e)
+        {
+            MainFrame.Navigate(new Pages.AppDataBackupPage());
+        }
 
         protected override void OnClosed(System.EventArgs e)
         {

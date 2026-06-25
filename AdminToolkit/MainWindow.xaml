@@ -98,6 +98,8 @@
                         Click="NavServerStorage_Click" />
                 <Button Content="Quick Actions Console" Style="{StaticResource MenuButtonStyle}" 
                         Click="NavQuickActionsPage_Click"/>
+                <Button Content="App Data Backup" Style="{StaticResource MenuButtonStyle}"
+                        Click="NavAppDataBackup_Click"/>
             </StackPanel>
             <Button Content="Home" Style="{StaticResource HomeButtonStyle}" 
                     VerticalAlignment="Bottom" Margin="40"

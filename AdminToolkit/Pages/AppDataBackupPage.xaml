@@ -1,0 +1,95 @@
+﻿<Page x:Class="AdminToolkit.Pages.AppDataBackupPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      Title="App Data Backup" Height="600" Width="900">
+
+    <Grid Background="#F5F5F5">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="350"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Border Background="White" BorderBrush="#E0E0E0" BorderThickness="0,0,1,0" Padding="20">
+            <StackPanel Grid.Column="0" VerticalAlignment="Stretch">
+                <TextBlock Text="App Data Backup Configuration" FontSize="18" FontWeight="Bold" Margin="0,0,0,20" Foreground="#333333"/>
+
+                <TextBlock Text="1. Select Targeting Mode" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10" Foreground="#555555"/>
+                <StackPanel Margin="10,0,0,15">
+                    <RadioButton x:Name="RbSingle" Content="Single Computer" IsChecked="True" Checked="TargetMode_Changed" Margin="0,0,0,8"/>
+                    <RadioButton x:Name="RbOu" Content="Active Directory OU" Checked="TargetMode_Changed" Margin="0,0,0,8"/>
+                    <RadioButton x:Name="RbUser" Content="Search by Active User" Checked="TargetMode_Changed" Margin="0,0,0,8"/>
+                </StackPanel>
+
+                <Separator Margin="0,5,0,15"/>
+
+                <TextBlock Text="2. Target Details" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10" Foreground="#555555"/>
+
+                <StackPanel x:Name="PanelSingle" Visibility="Visible" Margin="5,0,0,15">
+                    <TextBlock Text="Computer Name:" Margin="0,0,0,5"/>
+                    <TextBox x:Name="TxtSingleComputer" Height="28" VerticalContentAlignment="Center" Margin="0,0,0,10"/>
+                    <TextBlock Text="Target Username:" Margin="0,0,0,5"/>
+                    <TextBox x:Name="TxtSingleUser" Height="28" VerticalContentAlignment="Center"/>
+                </StackPanel>
+
+                <StackPanel x:Name="PanelOu" Visibility="Collapsed" Margin="5,0,0,15">
+                    <TextBlock Text="OU Distinguished Name (LDAP Path):" Margin="0,0,0,5"/>
+                    <TextBox x:Name="TxtOuPath" Height="28" VerticalContentAlignment="Center" ToolTip="e.g., OU=Workstations,DC=domain,DC=local"/>
+                </StackPanel>
+
+                <StackPanel x:Name="PanelUser" Visibility="Collapsed" Margin="5,0,0,15">
+                    <TextBlock Text="Target SamAccountName:" Margin="0,0,0,5"/>
+                    <TextBox x:Name="TxtSearchUser" Height="28" VerticalContentAlignment="Center"/>
+                </StackPanel>
+
+                <Separator Margin="0,5,0,15"/>
+
+                <TextBlock Text="3. Select Source Profile" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10" Foreground="#555555"/>
+                <ComboBox x:Name="ComboPreset" Height="28" SelectedIndex="0" SelectionChanged="ComboPreset_SelectionChanged" Margin="5,0,0,15">
+                    <ComboBoxItem Content="Google Chrome (Default Profile)"/>
+                    <ComboBoxItem Content="Microsoft Edge (Default Profile)"/>
+                    <ComboBoxItem Content="Custom AppData Path"/>
+                </ComboBox>
+
+                <StackPanel x:Name="PanelCustomPath" Visibility="Collapsed" Margin="5,0,0,15">
+                    <TextBlock Text="Relative AppData Path:" Margin="0,0,0,5"/>
+                    <TextBox x:Name="TxtCustomRelativePath" Height="28" VerticalContentAlignment="Center" ToolTip="e.g., Local\Slack\packages"/>
+                </StackPanel>
+
+                <TextBlock Text="Destination Share Location" FontSize="12" FontWeight="SemiBold" Margin="0,5,0,5" Foreground="#555555"/>
+                <TextBox x:Name="TxtDestinationShare" Text="\\storinator\ccis\appdatabackup\" IsReadOnly="True" Background="#F0F0F0" Height="28" VerticalContentAlignment="Center" Margin="5,0,0,25"/>
+
+                <Button x:Name="BtnStartBackup" Content="Run Backup Job" Click="BtnStartBackup_Click" Height="35" Background="#007ACC" Foreground="White" FontWeight="Bold" Cursor="Hand">
+                    <Button.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="3"/>
+                        </Style>
+                    </Button.Resources>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <!-- Use a Border to provide Padding (Grid has no Padding property) -->
+        <Border Grid.Column="1" Padding="20" Background="Transparent">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="Live Execution Console Log" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10" Foreground="#555555"/>
+
+                <TextBox x:Name="TxtLogConsole" 
+                         Grid.Row="1" 
+                         Background="#1E1E1E" 
+                         Foreground="#D4D4D4" 
+                         FontFamily="Consolas" 
+                         FontSize="12"
+                         IsReadOnly="True" 
+                         TextWrapping="Wrap" 
+                         AcceptsReturn="True" 
+                         VerticalScrollBarVisibility="Auto" 
+                         Padding="10"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Page>
