@@ -16,8 +16,8 @@
                 <TextBlock Text="1. Select Targeting Mode" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10" Foreground="#555555"/>
                 <StackPanel Margin="10,0,0,15">
                     <RadioButton x:Name="RbSingle" Content="Single Computer" IsChecked="True" Checked="TargetMode_Changed" Margin="0,0,0,8"/>
-                    <RadioButton x:Name="RbOu" Content="Active Directory OU" Checked="TargetMode_Changed" Margin="0,0,0,8"/>
-                    <RadioButton x:Name="RbUser" Content="Search by Active User" Checked="TargetMode_Changed" Margin="0,0,0,8"/>
+                    <!--<RadioButton x:Name="RbOu" Content="Active Directory OU" Checked="TargetMode_Changed" Margin="0,0,0,8"/>-->
+                    <!--<RadioButton x:Name="RbUser" Content="Search by Active User" Checked="TargetMode_Changed" Margin="0,0,0,8"/>-->
                 </StackPanel>
 
                 <Separator Margin="0,5,0,15"/>
@@ -73,12 +73,52 @@
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
+                
+                <StackPanel Grid.Row="0" Margin="0,0,0,20">
 
-                <TextBlock Grid.Row="0" Text="Live Execution Console Log" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10" Foreground="#555555"/>
+                    <TextBlock
+                    Text="Overall Progress"
+                    FontWeight="Bold"
+                    FontSize="14"
+                    Foreground="#555555"
+                    Margin="0,0,0,6"/>
 
-                <TextBox x:Name="TxtLogConsole" 
+                    <ProgressBar
+                    x:Name="OverallProgress"
+                    Height="22"
+                    Minimum="0"
+                    Maximum="100"/>
+
+                    <TextBlock
+                    x:Name="TxtProgress"
+                    Margin="0,6,0,0"
+                    FontFamily="Roboto Mono"
+                    Foreground="#555555"
+                    Text="Waiting..."/>
+
+                </StackPanel>
+                <TextBlock 
+                    Grid.Row="1" 
+                    Text="Live Execution Console Log" 
+                    FontSize="16" 
+                    FontWeight="SemiBold" 
+                    Margin="0,0,0,10" 
+                    Foreground="#555555"/>
+                
+                <RichTextBox x:Name="RtbLogConsole" 
+                    Grid.Row="2" 
+                    Background="#1E1E1E" 
+                    Foreground="#D4D4D4" 
+                    FontFamily="Roboto Mono"
+                    FontSize="12"
+                    IsReadOnly="True" 
+                    VerticalScrollBarVisibility="Auto" 
+                    Padding="10"/>
+
+                <!--<TextBox x:Name="TxtLogConsole" 
                          Grid.Row="1" 
                          Background="#1E1E1E" 
                          Foreground="#D4D4D4" 
@@ -88,7 +128,7 @@
                          TextWrapping="Wrap" 
                          AcceptsReturn="True" 
                          VerticalScrollBarVisibility="Auto" 
-                         Padding="10"/>
+                         Padding="10"/> -->
             </Grid>
         </Border>
     </Grid>

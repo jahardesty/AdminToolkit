@@ -4,9 +4,12 @@ using System.Diagnostics;
 using System.DirectoryServices;
 using System.IO;
 using System.Management;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Media;
 
 namespace AdminToolkit.Pages
 {
@@ -28,8 +31,8 @@ namespace AdminToolkit.Pages
             PanelUser.Visibility = Visibility.Collapsed;
 
             if (RbSingle.IsChecked == true) PanelSingle.Visibility = Visibility.Visible;
-            else if (RbOu.IsChecked == true) PanelOu.Visibility = Visibility.Visible;
-            else if (RbUser.IsChecked == true) PanelUser.Visibility = Visibility.Visible;
+           // else if (RbOu.IsChecked == true) PanelOu.Visibility = Visibility.Visible;
+           // else if (RbUser.IsChecked == true) PanelUser.Visibility = Visibility.Visible;
         }
 
         private void ComboPreset_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -40,13 +43,18 @@ namespace AdminToolkit.Pages
 
         private async void BtnStartBackup_Click(object sender, RoutedEventArgs e)
         {
-            TxtLogConsole.Clear();
+            RtbLogConsole.Document.Blocks.Clear();
+           // TxtLogConsole.Clear();
             BtnStartBackup.IsEnabled = false;
 
             try
             {
                 string relativeSrcPath = GetRelativeSourcePath();
                 List<BackupTarget> targets = await ResolveTargetsAsync();
+                OverallProgress.Minimum = 0;
+                OverallProgress.Maximum = targets.Count;
+                OverallProgress.Value = 0;
+
 
                 if (targets.Count == 0)
                 {
@@ -55,9 +63,17 @@ namespace AdminToolkit.Pages
                 }
 
                 LogToConsole($"[INFO] Queue processing starting for {targets.Count} target(s)...");
-
+                int completed = 0;
                 foreach (var target in targets)
                 {
+                   Dispatcher.Invoke(() =>
+                    {
+                        OverallProgress.Value = completed;
+                        TxtProgress.Text =
+                        $"Processing {target.ComputerName} ({completed + 1} of {targets.Count})";
+                    });
+
+
                     LogToConsole($"--------------------------------------------------");
                     LogToConsole($"[JOB START] Computer: {target.ComputerName} | User: {target.Username}");
 
@@ -76,17 +92,25 @@ namespace AdminToolkit.Pages
                     // This structure creates: \\storinator\ccis\appdatabackup\username\COMPUTERNAME_ChromeBackup\
                     string finalDest = Path.Combine(BaseDestination, target.Username, $"{target.ComputerName}_{folderSuffix}");
 
-                    LogToConsole($"[PATH] Remote Source: {remoteSource}");
-                    LogToConsole($"[PATH] Destination: {finalDest}");
+                    // LogToConsole($"[PATH] Remote Source: {remoteSource}");
+                    //LogToConsole($"[PATH] Destination: {finalDest}");
 
                     // 3. Run the optimized, quiet Robocopy engine
+                    OverallProgress.IsIndeterminate = true;
+                    TxtProgress.Text = $"Copying data from {target.ComputerName}";
                     bool success = await RunRobocopyAsync(remoteSource, finalDest);
+                    OverallProgress.IsIndeterminate = false;
+                    OverallProgress.Value = 100;
+
+                    TxtProgress.Text = $"Complete";
 
                     if (success)
                         LogToConsole($"[JOB SUCCESS] Backup complete for {target.ComputerName} ({folderSuffix})");
                     else
                         LogToConsole($"[JOB FAILED] Robocopy reported errors or skipped files for {target.ComputerName}");
                 }
+                completed++;
+                OverallProgress.Value = completed;
             }
             catch (Exception ex)
             {
@@ -95,6 +119,7 @@ namespace AdminToolkit.Pages
             finally
             {
                 BtnStartBackup.IsEnabled = true;
+                OverallProgress.IsIndeterminate = false;
                 LogToConsole("--------------------------------------------------");
                 LogToConsole("[FINISHED] Entire batch backup queue completed.");
             }
@@ -115,12 +140,12 @@ namespace AdminToolkit.Pages
                 }
                 targetList.Add(new BackupTarget { ComputerName = TxtSingleComputer.Text.Trim(), Username = TxtSingleUser.Text.Trim() });
             }
-            else if (RbOu.IsChecked == true)
+            //else if (RbOu.IsChecked == true)
             {
                 string ouPath = TxtOuPath.Text.Trim();
                 if (string.IsNullOrWhiteSpace(ouPath))
                 {
-                    LogToConsole("[ERROR] Please specify an LDAP OU path.");
+                  //LogToConsole("[ERROR] Please specify an LDAP OU path.");
                     return targetList;
                 }
 
@@ -141,7 +166,7 @@ namespace AdminToolkit.Pages
                     }
                 }
             }
-            else if (RbUser.IsChecked == true)
+           // else if (RbUser.IsChecked == true)
             {
                 string searchUser = TxtSearchUser.Text.Trim();
                 if (string.IsNullOrWhiteSpace(searchUser))
@@ -237,6 +262,7 @@ namespace AdminToolkit.Pages
 
         #endregion
 
+       
         #region Asynchronous Robocopy Execution Engine
 
 
@@ -259,7 +285,7 @@ namespace AdminToolkit.Pages
                 RedirectStandardError = true
             };
 
-            LogToConsole("[STATUS] Transfer engine initialized. Starting copy operation...");
+           // LogToConsole("[STATUS] Transfer engine initialized. Starting copy operation...");
 
             return await Task.Run(() =>
             {
@@ -270,7 +296,7 @@ namespace AdminToolkit.Pages
                 {
                     totalBytes = GetDirectorySize(source);
                     double gigabytes = (double)totalBytes / (1024 * 1024 * 1024);
-                    LogToConsole($"[TRANSFER] Copying target payload: {gigabytes:N2} GB");
+                    LogToConsole($"[STATUS] Copying target payload {gigabytes:N2} GB");
                 }
                 catch (Exception)
                 {
@@ -376,8 +402,23 @@ namespace AdminToolkit.Pages
         {
             Dispatcher.Invoke(() =>
             {
-                TxtLogConsole.AppendText($"[{DateTime.Now:HH:mm:ss}] {text}{Environment.NewLine}");
-                TxtLogConsole.ScrollToEnd();
+                //TxtLogConsole.AppendText($"[{DateTime.Now:HH:mm:ss}] {text}{Environment.NewLine}");
+                //TxtLogConsole.ScrollToEnd();
+                Brush Color = Brushes.White;
+                if (text.StartsWith("[SUCCESS]")) Color = Brushes.Green;
+                else if (text.StartsWith("[ERROR]") || (text.StartsWith("[FAILURE]"))) Color = Brushes.Red;
+                else if (text.StartsWith("[INFO]")) Color = Brushes.Yellow;
+                else if (text.StartsWith("[JOB START]")) Color = Brushes.Blue;
+               
+
+                string DisplayText = Regex.Replace(text, @"^\[[^\]]+\]*", ""); // Remove timestamp from the text for display
+                Paragraph p = new Paragraph();
+                p.Inlines.Add(new Run($"[{DateTime.Now:HH:mm}])")
+                { Foreground = Brushes.Gray });
+                p.Inlines.Add(new Run(text)
+                { Foreground = Color });
+                RtbLogConsole.Document.Blocks.Add(p);
+           // RtbLogConsole.AppendText($"{text}{Environment.NewLine}");
             });
         }
     }
