@@ -1,431 +1,756 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.DirectoryServices;
 using System.IO;
-using System.Management;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
+using FontAwesome.Sharp;
 
 namespace AdminToolkit.Pages
 {
     public partial class AppDataBackupPage : Page
     {
-        private const string BaseDestination = @"\\storinator\ccis\appdatabackup";
-
+        private const string BaseDestination =
+            @"\\storinator\ccis\appdatabackup";
+        private string _lastBackupFolder;
         public AppDataBackupPage()
         {
             InitializeComponent();
+            Loaded += AppDataBackupPage_Loaded;
         }
 
-        private void TargetMode_Changed(object sender, RoutedEventArgs e)
+        private void AppDataBackupPage_Loaded(
+            object sender,
+            RoutedEventArgs e)
         {
-            if (PanelSingle == null || PanelOu == null || PanelUser == null) return;
+            Window window = Window.GetWindow(this);
+
+            if (window != null)
+            {
+                window.Width = 1200;
+                window.Height = 600;
+            }
+        }
+
+        private void TargetMode_Changed(
+            object sender,
+            RoutedEventArgs e)
+        {
+            if (PanelSingle == null ||
+                PanelOu == null ||
+                PanelUser == null)
+            {
+                return;
+            }
 
             PanelSingle.Visibility = Visibility.Collapsed;
             PanelOu.Visibility = Visibility.Collapsed;
             PanelUser.Visibility = Visibility.Collapsed;
 
-            if (RbSingle.IsChecked == true) PanelSingle.Visibility = Visibility.Visible;
-           // else if (RbOu.IsChecked == true) PanelOu.Visibility = Visibility.Visible;
-           // else if (RbUser.IsChecked == true) PanelUser.Visibility = Visibility.Visible;
+            if (RbSingle.IsChecked == true)
+            {
+                PanelSingle.Visibility = Visibility.Visible;
+            }
         }
 
-        private void ComboPreset_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void ComboPreset_SelectionChanged(
+            object sender,
+            SelectionChangedEventArgs e)
         {
-            if (PanelCustomPath == null) return;
-            PanelCustomPath.Visibility = (ComboPreset.SelectedIndex == 2) ? Visibility.Visible : Visibility.Collapsed;
+            if (PanelCustomPath == null)
+            {
+                return;
+            }
+
+            PanelCustomPath.Visibility =
+                ComboPreset.SelectedIndex == 2
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
         }
 
-        private async void BtnStartBackup_Click(object sender, RoutedEventArgs e)
+        private async void BtnStartBackup_Click(
+            object sender,
+            RoutedEventArgs e)
         {
             RtbLogConsole.Document.Blocks.Clear();
-           // TxtLogConsole.Clear();
             BtnStartBackup.IsEnabled = false;
+            BtnOpenAppDataArchive.Visibility = Visibility.Collapsed;
+            _lastBackupFolder = null;
+            OverallProgress.IsIndeterminate = false;
+            OverallProgress.Minimum = 0;
+            OverallProgress.Maximum = 100;
+            OverallProgress.Value = 0;
+
+            TxtProgress.Text = "Preparing backup...";
 
             try
             {
-                string relativeSrcPath = GetRelativeSourcePath();
+                string relativeSourcePath = GetRelativeSourcePath();
                 List<BackupTarget> targets = await ResolveTargetsAsync();
-                OverallProgress.Minimum = 0;
-                OverallProgress.Maximum = targets.Count;
-                OverallProgress.Value = 0;
-
 
                 if (targets.Count == 0)
                 {
-                    LogToConsole("[WARN] No valid, reachable targets found. Aborting execution.");
+                    TxtProgress.Text = "No valid target found";
+
+                    LogToConsole(
+                        "[WARN] No valid target was found. Backup canceled.");
+
                     return;
                 }
 
-                LogToConsole($"[INFO] Queue processing starting for {targets.Count} target(s)...");
-                int completed = 0;
-                foreach (var target in targets)
+                LogToConsole("[INFO] Preparing backup queue...");
+                LogSeparator();
+
+                foreach (BackupTarget target in targets)
                 {
-                   Dispatcher.Invoke(() =>
+                    string folderSuffix =
+                        GetDestinationFolderSuffix();
+
+                    string profileDescription =
+                        GetProfileDescription();
+
+                    string remoteSource =
+                        $@"\\{target.ComputerName}\c$\Users\{target.Username}\{relativeSourcePath}";
+
+                    string finalDestination = Path.Combine(
+                        BaseDestination,
+                        target.Username,
+                        $"{target.ComputerName}_{folderSuffix}");
+                    _lastBackupFolder = finalDestination;
+
+                    LogToConsole("[JOB START] Starting backup");
+
+                    LogDetail(
+                        IconChar.Desktop,
+                        "Computer",
+                        target.ComputerName,
+                        Brushes.DeepSkyBlue);
+
+                    LogDetail(
+                        IconChar.User,
+                        "User",
+                        target.Username,
+                        Brushes.MediumPurple);
+
+                    LogDetail(
+                        IconChar.FolderOpen,
+                        "Profile",
+                        profileDescription,
+                        Brushes.Goldenrod);
+
+                    // Verify the source before invoking Robocopy.
+                    if (!Directory.Exists(remoteSource))
                     {
-                        OverallProgress.Value = completed;
-                        TxtProgress.Text =
-                        $"Processing {target.ComputerName} ({completed + 1} of {targets.Count})";
-                    });
+                        OverallProgress.IsIndeterminate = false;
+                        OverallProgress.Value = 0;
+                        TxtProgress.Text = "Source folder unavailable";
 
+                        LogToConsole(
+                            "[ERROR] The selected profile folder does not exist or cannot be accessed.");
 
-                    LogToConsole($"--------------------------------------------------");
-                    LogToConsole($"[JOB START] Computer: {target.ComputerName} | User: {target.Username}");
+                        LogDetail(
+                            IconChar.FolderOpen,
+                            "Source",
+                            remoteSource,
+                            Brushes.IndianRed);
 
-                    // 1. Determine the destination folder suffix based on the dropdown selection
-                    string folderSuffix = ComboPreset.SelectedIndex switch
+                        continue;
+                    }
+
+                    // Verify that the destination can be created.
+                    try
                     {
-                        0 => "ChromeBackup",
-                        1 => "EdgeBackup",
-                        2 => "CustomBackup",
-                        _ => "AppDataBackup"
-                    };
+                        Directory.CreateDirectory(finalDestination);
+                    }
+                    catch (Exception ex)
+                    {
+                        OverallProgress.IsIndeterminate = false;
+                        OverallProgress.Value = 0;
+                        TxtProgress.Text = "Destination unavailable";
 
-                    // 2. Construct the isolated source and destination paths
-                    string remoteSource = $@"\\{target.ComputerName}\c$\Users\{target.Username}\{relativeSrcPath}";
+                        LogToConsole(
+                            $"[ERROR] The destination folder could not be created: {ex.Message}");
 
-                    // This structure creates: \\storinator\ccis\appdatabackup\username\COMPUTERNAME_ChromeBackup\
-                    string finalDest = Path.Combine(BaseDestination, target.Username, $"{target.ComputerName}_{folderSuffix}");
+                        LogDetail(
+                            IconChar.FolderOpen,
+                            "Destination",
+                            finalDestination,
+                            Brushes.IndianRed);
 
-                    // LogToConsole($"[PATH] Remote Source: {remoteSource}");
-                    //LogToConsole($"[PATH] Destination: {finalDest}");
+                        continue;
+                    }
 
-                    // 3. Run the optimized, quiet Robocopy engine
                     OverallProgress.IsIndeterminate = true;
-                    TxtProgress.Text = $"Copying data from {target.ComputerName}";
-                    bool success = await RunRobocopyAsync(remoteSource, finalDest);
+
+                    TxtProgress.Text =
+                        $"Copying {target.Username}'s data from {target.ComputerName}...";
+
+                    RobocopyResult result =
+                        await RunRobocopyAsync(
+                            remoteSource,
+                            finalDestination);
+
                     OverallProgress.IsIndeterminate = false;
-                    OverallProgress.Value = 100;
 
-                    TxtProgress.Text = $"Complete";
+                    if (result.IsSuccess)
+                    {
+                        OverallProgress.Value = 100;
 
-                    if (success)
-                        LogToConsole($"[JOB SUCCESS] Backup complete for {target.ComputerName} ({folderSuffix})");
+                        if (result.HasWarnings)
+                        {
+                            TxtProgress.Text =
+                                "Backup completed with warnings";
+
+                            LogToConsole(
+                                "[WARN] Backup completed, but some files may not have copied.");
+                        }
+                        else
+                        {
+                            TxtProgress.Text = "Backup complete";
+
+                            LogToConsole(
+                                "[SUCCESS] Backup completed successfully");
+                        }
+                    }
                     else
-                        LogToConsole($"[JOB FAILED] Robocopy reported errors or skipped files for {target.ComputerName}");
+                    {
+                        OverallProgress.Value = 0;
+                        TxtProgress.Text = "Backup failed";
+
+                        LogToConsole(
+                            $"[FAILURE] Backup failed with Robocopy exit code {result.ExitCode}.");
+                    }
                 }
-                completed++;
-                OverallProgress.Value = completed;
+                
+                LogSeparator();
+
+                LogToConsole(
+                    "[FINISHED] All backup jobs completed");
             }
             catch (Exception ex)
             {
-                LogToConsole($"[CRITICAL ERROR] Workflow broke: {ex.Message}");
+                OverallProgress.IsIndeterminate = false;
+                OverallProgress.Value = 0;
+                TxtProgress.Text = "Backup workflow failed";
+
+                LogToConsole(
+                    $"[CRITICAL ERROR] Backup workflow failed: {ex.Message}");
             }
             finally
             {
                 BtnStartBackup.IsEnabled = true;
                 OverallProgress.IsIndeterminate = false;
-                LogToConsole("--------------------------------------------------");
-                LogToConsole("[FINISHED] Entire batch backup queue completed.");
+                BtnOpenAppDataArchive.Visibility = Visibility.Visible;
             }
         }
 
-        #region Target Resolution Logic
+        #region Target Resolution
 
-        private async Task<List<BackupTarget>> ResolveTargetsAsync()
+        private Task<List<BackupTarget>> ResolveTargetsAsync()
         {
-            var targetList = new List<BackupTarget>();
+            var targets = new List<BackupTarget>();
 
-            if (RbSingle.IsChecked == true)
+            string computerName =
+                TxtSingleComputer.Text.Trim();
+
+            string username =
+                TxtSingleUser.Text.Trim();
+
+            if (string.IsNullOrWhiteSpace(computerName) ||
+                string.IsNullOrWhiteSpace(username))
             {
-                if (string.IsNullOrWhiteSpace(TxtSingleComputer.Text) || string.IsNullOrWhiteSpace(TxtSingleUser.Text))
-                {
-                    LogToConsole("[ERROR] Computer Name and Username must not be empty.");
-                    return targetList;
-                }
-                targetList.Add(new BackupTarget { ComputerName = TxtSingleComputer.Text.Trim(), Username = TxtSingleUser.Text.Trim() });
-            }
-            //else if (RbOu.IsChecked == true)
-            {
-                string ouPath = TxtOuPath.Text.Trim();
-                if (string.IsNullOrWhiteSpace(ouPath))
-                {
-                  //LogToConsole("[ERROR] Please specify an LDAP OU path.");
-                    return targetList;
-                }
+                LogToConsole(
+                    "[ERROR] Computer Name and Username are required.");
 
-                LogToConsole($"[AD] Querying target computers in: {ouPath}");
-                List<string> computers = await Task.Run(() => GetComputersFromOu(ouPath));
-                LogToConsole($"[AD] Found {computers.Count} computers. Attempting to identify logged-in profile names...");
-
-                foreach (string comp in computers)
-                {
-                    string activeUser = await Task.Run(() => GetActiveUserViaWmi(comp));
-                    if (!string.IsNullOrEmpty(activeUser))
-                    {
-                        targetList.Add(new BackupTarget { ComputerName = comp, Username = activeUser });
-                    }
-                    else
-                    {
-                        LogToConsole($"[WMI SKIP] Could not determine active logged-in interactive user for {comp}. Skipping.");
-                    }
-                }
-            }
-           // else if (RbUser.IsChecked == true)
-            {
-                string searchUser = TxtSearchUser.Text.Trim();
-                if (string.IsNullOrWhiteSpace(searchUser))
-                {
-                    LogToConsole("[ERROR] Target SamAccountName must be filled.");
-                    return targetList;
-                }
-
-                LogToConsole($"[TRACKER] Scanning active network spaces to find where user [{searchUser}] is logged in...");
-                // Note: For large environments, scanning all machines live can take time. Alternately cross-reference AD logons.
-                // Here we fall back on discovering their preferred computer or prompt for input if ambiguous.
-                LogToConsole("[WARN] Network tracking search complete. Resolving targets...");
+                return Task.FromResult(targets);
             }
 
-            return targetList;
-        }
-
-        private List<string> GetComputersFromOu(string ouLdapPath)
-        {
-            var compList = new List<string>();
-            try
-            {
-                using (DirectoryEntry entry = new DirectoryEntry($"LDAP://{ouLdapPath}"))
-                using (DirectorySearcher searcher = new DirectorySearcher(entry))
+            targets.Add(
+                new BackupTarget
                 {
-                    searcher.Filter = "(objectClass=computer)";
-                    searcher.PropertiesToLoad.Add("name");
+                    ComputerName = computerName,
+                    Username = username
+                });
 
-                    SearchResultCollection results = searcher.FindAll();
-                    foreach (SearchResult res in results)
-                    {
-                        if (res.Properties.Contains("name"))
-                            compList.Add(res.Properties["name"][0].ToString());
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                LogToConsole($"[AD ERROR] Failed retrieving objects from OU: {ex.Message}");
-            }
-            return compList;
-        }
-
-        private string GetActiveUserViaWmi(string computerName)
-        {
-            try
-            {
-                ConnectionOptions options = new ConnectionOptions
-                {
-                    Timeout = TimeSpan.FromSeconds(2), // Drop this down so your UI doesn't hang long
-                    Authentication = AuthenticationLevel.PacketPrivacy, // Required by modern Windows DCOM policies
-                    Impersonation = ImpersonationLevel.Impersonate
-                };
-
-                ManagementScope scope = new ManagementScope($@"\\{computerName}\root\cimv2", options);
-                scope.Connect();
-
-                ObjectQuery query = new ObjectQuery("SELECT UserName FROM Win32_ComputerSystem");
-                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher(scope, query))
-                {
-                    foreach (ManagementObject obj in searcher.Get())
-                    {
-                        string rawUser = obj["UserName"]?.ToString();
-                        if (!string.IsNullOrEmpty(rawUser) && rawUser.Contains(@"\"))
-                        {
-                            return rawUser.Split('\\')[1];
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                // Log explicitly to the console to see exactly *why* it's failing (Access Denied vs RPC Server Unavailable)
-                // LogToConsole($"[DEBUG] WMI fail on {computerName}: {ex.Message}");
-            }
-            return null;
+            return Task.FromResult(targets);
         }
 
         #endregion
 
-        #region Helper Path Routing
+        #region Path and Profile Routing
 
         private string GetRelativeSourcePath()
         {
             return ComboPreset.SelectedIndex switch
             {
                 0 => @"AppData\Local\Google\Chrome\User Data\Default",
+
                 1 => @"AppData\Local\Microsoft\Edge\User Data\Default",
-                2 => TxtCustomRelativePath.Text.Trim().TrimStart('\\'),
-                _ => throw new InvalidOperationException("Unknown dropdown path mode configuration")
+
+                2 => TxtCustomRelativePath.Text
+                    .Trim()
+                    .TrimStart('\\'),
+
+                _ => throw new InvalidOperationException(
+                    "Unknown source-profile selection.")
+            };
+        }
+
+        private string GetDestinationFolderSuffix()
+        {
+            return ComboPreset.SelectedIndex switch
+            {
+                0 => "ChromeBackup",
+                1 => "EdgeBackup",
+                2 => "CustomBackup",
+                _ => "AppDataBackup"
+            };
+        }
+
+        private string GetProfileDescription()
+        {
+            return ComboPreset.SelectedIndex switch
+            {
+                0 => "Google Chrome — Default Profile",
+                1 => "Microsoft Edge — Default Profile",
+                2 => "Custom AppData Profile",
+                _ => "Application Data Profile"
             };
         }
 
         #endregion
 
-       
-        #region Asynchronous Robocopy Execution Engine
+        #region Robocopy
 
-
-        private async Task<bool> RunRobocopyAsync(string source, string target)
+        private async Task<RobocopyResult> RunRobocopyAsync(
+            string source,
+            string target)
         {
-            // New Flags added:
-            // /NFL : No File List - don't log individual file names.
-            // /NDL : No Directory List - don't log directory names.
-            // /NJH : No Job Header.
-            // /NJS : No Job Summary (we will parse the size manually or via exit codes).
-            string args = $"\"{source}\" \"{target}\" /E /R:1 /W:2 /XJD /MT:8 /NFL /NDL /NJH /NJS";
+            string arguments =
+                $"\"{source}\" \"{target}\" " +
+                "/E /R:1 /W:2 /XJD /MT:8 " +
+                "/NFL /NDL /NJH /NJS";
 
-            ProcessStartInfo psi = new ProcessStartInfo
+            var startInfo = new ProcessStartInfo
             {
                 FileName = "robocopy.exe",
-                Arguments = args,
+                Arguments = arguments,
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true
             };
-
-           // LogToConsole("[STATUS] Transfer engine initialized. Starting copy operation...");
 
             return await Task.Run(() =>
             {
                 long totalBytes = 0;
 
-                // Calculate size beforehand to show exactly how much data is being handled
                 try
                 {
                     totalBytes = GetDirectorySize(source);
-                    double gigabytes = (double)totalBytes / (1024 * 1024 * 1024);
-                    LogToConsole($"[STATUS] Copying target payload {gigabytes:N2} GB");
+
+                    string formattedSize =
+                        FormatFileSize(totalBytes);
+
+                    LogDetail(
+                        IconChar.FloppyDisk,
+                        "Data",
+                        $"{formattedSize} to copy",
+                        Brushes.CornflowerBlue);
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    LogToConsole("[WARN] Could not calculate source size ahead of transfer (Path may be locked or unreachable).");
+                    LogToConsole(
+                        $"[WARN] Source size could not be calculated: {ex.Message}");
                 }
 
-                using (Process process = new Process { StartInfo = psi })
+                using var process = new Process
+                {
+                    StartInfo = startInfo
+                };
+
+                try
                 {
                     process.Start();
 
-                    // Read the stream to ensure it doesn't buffer/hang, 
-                    // but we don't spam LogToConsole with it anymore.
-                    string silentOutput = process.StandardOutput.ReadToEnd();
+                    string standardOutput =
+                        process.StandardOutput.ReadToEnd();
+
+                    string standardError =
+                        process.StandardError.ReadToEnd();
 
                     process.WaitForExit();
 
-                    // Robocopy Exit Codes:
-                    // 0 = No files copied, no errors (Everything already mirrored).
-                    // 1 = Files copied successfully.
-                    // 2 = Extra files detected.
-                    // 4 = Mismatched files detected.
-                    // Any code under 8 means successful operational execution.
-                    bool isSuccess = process.ExitCode < 8;
+                    int exitCode = process.ExitCode;
 
-                    if (isSuccess)
+                    /*
+                     * Robocopy exit codes:
+                     *
+                     * 0–7 = Successful operation
+                     * 8+  = At least one failure
+                     *
+                     * Exit code 9 is 8 + 1:
+                     * files copied, but one or more failures occurred.
+                     * This application treats code 9 as completed with warnings.
+                     */
+
+                    bool hasWarnings = exitCode == 9;
+
+                    bool isSuccess =
+                        exitCode < 8 || hasWarnings;
+
+                    if (!isSuccess)
                     {
-                        double finalGb = (double)totalBytes / (1024 * 1024 * 1024);
-                        LogToConsole($"[SUCCESS] Finished Copy of {finalGb:N2} GB data successfully.");
-                    }
-                    else
-                    {
-                        LogToConsole($"[FAILURE] Transfer terminated with Robocopy exit code: {process.ExitCode}");
+                        LogRobocopyErrorOutput(
+                            standardOutput,
+                            standardError);
                     }
 
-                    return isSuccess;
+                    return new RobocopyResult
+                    {
+                        IsSuccess = isSuccess,
+                        HasWarnings = hasWarnings,
+                        ExitCode = exitCode,
+                        TotalBytes = totalBytes
+                    };
+                }
+                catch (Exception ex)
+                {
+                    LogToConsole(
+                        $"[ERROR] Robocopy could not be started: {ex.Message}");
+
+                    return new RobocopyResult
+                    {
+                        IsSuccess = false,
+                        HasWarnings = false,
+                        ExitCode = -1,
+                        TotalBytes = totalBytes
+                    };
                 }
             });
         }
 
-        // Quick helper method to accurately get directory size over UNC shares
+        private void LogRobocopyErrorOutput(
+            string standardOutput,
+            string standardError)
+        {
+            string usefulOutput =
+                GetUsefulRobocopyError(standardOutput);
+
+            if (!string.IsNullOrWhiteSpace(usefulOutput))
+            {
+                LogToConsole(
+                    $"[ERROR] {usefulOutput}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(standardError))
+            {
+                LogToConsole(
+                    $"[ERROR] {standardError.Trim()}");
+            }
+        }
+
+        private static string GetUsefulRobocopyError(
+            string output)
+        {
+            if (string.IsNullOrWhiteSpace(output))
+            {
+                return string.Empty;
+            }
+
+            string[] lines = output.Split(
+                new[]
+                {
+                    "\r\n",
+                    "\n"
+                },
+                StringSplitOptions.RemoveEmptyEntries);
+
+            var usefulLines = new List<string>();
+
+            foreach (string line in lines)
+            {
+                string trimmedLine = line.Trim();
+
+                if (trimmedLine.Contains(
+                        "ERROR",
+                        StringComparison.OrdinalIgnoreCase) ||
+                    trimmedLine.Contains(
+                        "Access is denied",
+                        StringComparison.OrdinalIgnoreCase) ||
+                    trimmedLine.Contains(
+                        "network path",
+                        StringComparison.OrdinalIgnoreCase) ||
+                    trimmedLine.Contains(
+                        "cannot find",
+                        StringComparison.OrdinalIgnoreCase) ||
+                    trimmedLine.Contains(
+                        "invalid",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    usefulLines.Add(trimmedLine);
+                }
+            }
+
+            if (usefulLines.Count > 0)
+            {
+                return string.Join(
+                    Environment.NewLine,
+                    usefulLines);
+            }
+
+            return output.Trim();
+        }
+
         private long GetDirectorySize(string folderPath)
         {
-            if (!Directory.Exists(folderPath)) return 0;
-
-            long size = 0;
-            var di = new DirectoryInfo(folderPath);
-
-            foreach (var fi in di.EnumerateFiles("*", SearchOption.AllDirectories))
+            if (!Directory.Exists(folderPath))
             {
-                try { size += fi.Length; } catch { /* Skip locked file sizes */ }
+                return 0;
             }
-            return size;
-        }
-        /*
-        private async Task<bool> RunRobocopyAsync(string source, string target)
-        {
-            // /E   : Subdirectories (inc. empty)
-            // /R:1 : Retry once on locked database files (e.g. SQLite locks when browser is active)
-            // /W:2 : Wait two seconds before retrying
-            // /XJD : Exclude junction loops 
-            // /MT:8: Fire 8 multi-threaded network pipes to expedite transfer of browser cache files
-            string args = $"\"{source}\" \"{target}\" /E /R:1 /W:2 /XJD /MT:8";
 
-            ProcessStartInfo psi = new ProcessStartInfo
-            {
-                FileName = "robocopy.exe",
-                Arguments = args,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true
-            };
+            long totalSize = 0;
+            var directory = new DirectoryInfo(folderPath);
 
-            return await Task.Run(() =>
+            foreach (FileInfo file in directory.EnumerateFiles(
+                         "*",
+                         SearchOption.AllDirectories))
             {
-                using (Process process = new Process { StartInfo = psi })
+                try
                 {
-                    process.Start();
-
-                    // Read output line by line dynamically and append straight onto our custom page terminal
-                    while (!process.StandardOutput.EndOfStream)
-                    {
-                        string line = process.StandardOutput.ReadLine();
-                        if (!string.IsNullOrWhiteSpace(line) && !line.StartsWith(" "))
-                        {
-                            // Strip massive lines of blank spaces common in robocopy logs to keep clean console format
-                            LogToConsole($"[ROBOCOPY] {line.Trim()}");
-                        }
-                    }
-
-                    process.WaitForExit();
-
-                    // Exit codes under 8 indicate data was moved without catastrophic error states
-                    return process.ExitCode < 8;
+                    totalSize += file.Length;
                 }
-            });
+                catch
+                {
+               
+                }
+            }
+
+            return totalSize;
         }
-        */
+
+        private static string FormatFileSize(long bytes)
+        {
+            const double kilobyte = 1024;
+            const double megabyte = kilobyte * 1024;
+            const double gigabyte = megabyte * 1024;
+
+            if (bytes >= gigabyte)
+            {
+                return $"{bytes / gigabyte:N2} GB";
+            }
+
+            if (bytes >= megabyte)
+            {
+                return $"{bytes / megabyte:N2} MB";
+            }
+
+            if (bytes >= kilobyte)
+            {
+                return $"{bytes / kilobyte:N2} KB";
+            }
+
+            return $"{bytes:N0} bytes";
+        }
 
         #endregion
+
+        #region Console Formatting
 
         public void LogToConsole(string text)
         {
             Dispatcher.Invoke(() =>
             {
-                //TxtLogConsole.AppendText($"[{DateTime.Now:HH:mm:ss}] {text}{Environment.NewLine}");
-                //TxtLogConsole.ScrollToEnd();
-                Brush Color = Brushes.White;
-                if (text.StartsWith("[SUCCESS]")) Color = Brushes.Green;
-                else if (text.StartsWith("[ERROR]") || (text.StartsWith("[FAILURE]"))) Color = Brushes.Red;
-                else if (text.StartsWith("[INFO]")) Color = Brushes.Yellow;
-                else if (text.StartsWith("[JOB START]")) Color = Brushes.Blue;
-               
+                Brush color = Brushes.White;
+                IconChar selectedIcon = IconChar.CircleInfo;
 
-                string DisplayText = Regex.Replace(text, @"^\[[^\]]+\]*", ""); // Remove timestamp from the text for display
-                Paragraph p = new Paragraph();
-                p.Inlines.Add(new Run($"[{DateTime.Now:HH:mm}])")
-                { Foreground = Brushes.Gray });
-                p.Inlines.Add(new Run(text)
-                { Foreground = Color });
-                RtbLogConsole.Document.Blocks.Add(p);
-           // RtbLogConsole.AppendText($"{text}{Environment.NewLine}");
+                if (text.StartsWith("[SUCCESS]"))
+                {
+                    color = Brushes.LimeGreen;
+                    selectedIcon = IconChar.Check;
+                }
+                else if (
+                    text.StartsWith("[ERROR]") ||
+                    text.StartsWith("[FAILURE]") ||
+                    text.StartsWith("[CRITICAL ERROR]"))
+                {
+                    color = Brushes.IndianRed;
+                    selectedIcon = IconChar.Xmark;
+                }
+                else if (text.StartsWith("[WARN]"))
+                {
+                    color = Brushes.Orange;
+                    selectedIcon =
+                        IconChar.TriangleExclamation;
+                }
+                else if (text.StartsWith("[INFO]"))
+                {
+                    color = Brushes.DeepSkyBlue;
+                    selectedIcon = IconChar.CircleInfo;
+                }
+                else if (text.StartsWith("[JOB START]"))
+                {
+                    color = Brushes.Cyan;
+                    selectedIcon = IconChar.Play;
+                }
+                else if (text.StartsWith("[FINISHED]"))
+                {
+                    color = Brushes.LimeGreen;
+                    selectedIcon = IconChar.FlagCheckered;
+                }
+
+                string displayText = Regex.Replace(
+                    text,
+                    @"^\[[^\]]+\]\s*",
+                    "");
+
+                var paragraph = new Paragraph
+                {
+                    Margin = new Thickness(0, 4, 0, 4)
+                };
+
+                paragraph.Inlines.Add(
+                    new Run($"[{DateTime.Now:HH:mm}] ")
+                    {
+                        Foreground = Brushes.Gray
+                    });
+
+                var icon = new IconBlock
+                {
+                    Icon = selectedIcon,
+                    Foreground = color,
+                    Width = 15,
+                    Height = 15,
+                    Margin = new Thickness(0, 0, 8, -2)
+                };
+
+                paragraph.Inlines.Add(
+                    new InlineUIContainer(icon)
+                    {
+                        BaselineAlignment =
+                            BaselineAlignment.Center
+                    });
+
+                paragraph.Inlines.Add(
+                    new Run(displayText)
+                    {
+                        Foreground = color
+                    });
+
+                RtbLogConsole.Document.Blocks.Add(paragraph);
+                RtbLogConsole.ScrollToEnd();
             });
         }
+
+        private void LogDetail(
+            IconChar iconChar,
+            string label,
+            string value,
+            Brush iconColor)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                var paragraph = new Paragraph
+                {
+                    // Indents detail rows beneath timestamped entries.
+                    Margin = new Thickness(105, 2, 0, 2)
+                };
+
+                var icon = new IconBlock
+                {
+                    Icon = iconChar,
+                    Foreground = iconColor,
+                    Width = 14,
+                    Height = 14,
+                    Margin = new Thickness(0, 0, 8, -2)
+                };
+
+                paragraph.Inlines.Add(
+                    new InlineUIContainer(icon)
+                    {
+                        BaselineAlignment =
+                            BaselineAlignment.Center
+                    });
+
+                paragraph.Inlines.Add(
+                    new Run($"{label,-14}: ")
+                    {
+                        Foreground = Brushes.Gray,
+                        FontWeight = FontWeights.SemiBold
+                    });
+
+                paragraph.Inlines.Add(
+                    new Run(value)
+                    {
+                        Foreground = Brushes.White
+                    });
+
+                RtbLogConsole.Document.Blocks.Add(paragraph);
+                RtbLogConsole.ScrollToEnd();
+            });
+        }
+
+        private void LogSeparator()
+        {
+            Dispatcher.Invoke(() =>
+            {
+                var separator = new Border
+                {
+                    Height = 1,
+                    Background = new SolidColorBrush(
+                        System.Windows.Media.Color.FromRgb(
+                            75,
+                            75,
+                            75)),
+                    Margin = new Thickness(0, 10, 0, 10)
+                };
+
+                var container =
+                    new BlockUIContainer(separator);
+
+                RtbLogConsole.Document.Blocks.Add(container);
+                RtbLogConsole.ScrollToEnd();
+            });
+        }
+        
+        private void OpenAppDataArchive_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(_lastBackupFolder))
+            {
+                MessageBox.Show("No backup has been performed.");
+                return;
+            }
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = $"\"{_lastBackupFolder}\"",
+                UseShellExecute = true
+            });
+        }
+
+        #endregion
     }
 
     public class BackupTarget
     {
-        public string ComputerName { get; set; }
-        public string Username { get; set; }
+        public string ComputerName { get; set; } = string.Empty;
+
+        public string Username { get; set; } = string.Empty;
+    }
+
+    public class RobocopyResult
+    {
+        public bool IsSuccess { get; set; }
+
+        public bool HasWarnings { get; set; }
+
+        public int ExitCode { get; set; }
+
+        public long TotalBytes { get; set; }
     }
 }
