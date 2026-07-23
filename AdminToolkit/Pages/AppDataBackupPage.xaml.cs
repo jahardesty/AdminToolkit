@@ -32,7 +32,7 @@ namespace AdminToolkit.Pages
             if (window != null)
             {
                 window.Width = 1200;
-                window.Height = 600;
+                window.Height = 615;
             }
         }
 

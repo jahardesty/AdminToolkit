@@ -62,5 +62,145 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <Style x:Key="ModernButtonBase"
+               TargetType="Button">
+
+            <Setter Property="Foreground"
+                    Value="White"/>
+
+            <Setter Property="FontSize"
+                    Value="13"/>
+
+            <Setter Property="FontWeight"
+                    Value="SemiBold"/>
+
+            <Setter Property="Height"
+                    Value="38"/>
+
+            <Setter Property="Padding"
+                    Value="18,0"/>
+
+            <Setter Property="Cursor"
+                    Value="Hand"/>
+
+            <Setter Property="BorderThickness"
+                    Value="0"/>
+
+            <Setter Property="HorizontalContentAlignment"
+                    Value="Center"/>
+
+            <Setter Property="VerticalContentAlignment"
+                    Value="Center"/>
+
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+
+                        <Border x:Name="ButtonBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                SnapsToDevicePixels="True">
+
+                            <ContentPresenter
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                Margin="{TemplateBinding Padding}"/>
+
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+
+                            <Trigger Property="IsMouseOver"
+                                     Value="True">
+                                <Setter TargetName="ButtonBorder"
+                                        Property="Opacity"
+                                        Value="0.88"/>
+                            </Trigger>
+
+                            <Trigger Property="IsPressed"
+                                     Value="True">
+                                <Setter TargetName="ButtonBorder"
+                                        Property="Opacity"
+                                        Value="0.72"/>
+
+                                <Setter TargetName="ButtonBorder"
+                                        Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="0.98"
+                                                        ScaleY="0.98"/>
+                                    </Setter.Value>
+                                </Setter>
+
+                                <Setter TargetName="ButtonBorder"
+                                        Property="RenderTransformOrigin"
+                                        Value="0.5,0.5"/>
+                            </Trigger>
+
+                            <Trigger Property="IsEnabled"
+                                     Value="False">
+                                <Setter TargetName="ButtonBorder"
+                                        Property="Opacity"
+                                        Value="0.45"/>
+
+                                <Setter Property="Cursor"
+                                        Value="Arrow"/>
+                            </Trigger>
+
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Primary blue button -->
+        <Style x:Key="PrimaryButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource ModernButtonBase}">
+
+            <Setter Property="Background"
+                    Value="#007ACC"/>
+
+            <Setter Property="BorderBrush"
+                    Value="#007ACC"/>
+        </Style>
+
+        
+        <Style x:Key="SuccessButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource ModernButtonBase}">
+
+            <Setter Property="Background"
+                    Value="#2E7D32"/>
+
+            <Setter Property="BorderBrush"
+                    Value="#2E7D32"/>
+        </Style>
+
+        <!-- Gray secondary button -->
+        <Style x:Key="SecondaryButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource ModernButtonBase}">
+
+            <Setter Property="Background"
+                    Value="#5F6368"/>
+
+            <Setter Property="BorderBrush"
+                    Value="#5F6368"/>
+        </Style>
+
+        <!-- Red destructive button -->
+        <Style x:Key="DangerButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource ModernButtonBase}">
+
+            <Setter Property="Background"
+                    Value="#C62828"/>
+
+            <Setter Property="BorderBrush"
+                    Value="#C62828"/>
+        </Style>
+
     </Application.Resources>
 </Application>
