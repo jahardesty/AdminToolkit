@@ -58,6 +58,11 @@ namespace AdminToolkit
             MainFrame.Navigate(new Pages.AppDataBackupPage());
         }
 
+        private void NavRemoteCliPage_Click(object sender, RoutedEventArgs e)
+        {
+            MainFrame.Navigate(new Pages.RemoteCLIPage());
+        }
+
         protected override void OnClosed(System.EventArgs e)
         {
             Application.Current.Shutdown();

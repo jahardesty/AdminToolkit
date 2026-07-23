@@ -8,8 +8,8 @@
         <Style x:Key="MenuButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Height" Value="50"/>
-            <Setter Property="Margin" Value="10,2,10,2"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="Margin" Value="10,2,5,2"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
             <Setter Property="Padding" Value="15,0,0,0"/>
@@ -100,11 +100,13 @@
                         Click="NavQuickActionsPage_Click"/>
                 <Button Content="App Data Backup" Style="{StaticResource MenuButtonStyle}"
                         Click="NavAppDataBackup_Click"/>
+                <Button Content="Remote CLI Terminal" Style="{StaticResource MenuButtonStyle}"
+                        Click="NavRemoteCliPage_Click" />
             </StackPanel>
             <Button Content="Home" Style="{StaticResource HomeButtonStyle}" 
                     VerticalAlignment="Bottom" Margin="40"
                     Click="NavWelcomePage_Click"/> 
-            <TextBlock Text="v1.0.0" Foreground="Gray" VerticalAlignment="Bottom"
+            <TextBlock Text="v1.0.5" Foreground="Gray" VerticalAlignment="Bottom"
                        HorizontalAlignment="Center" Margin="10"/>
         </Grid>
         <Frame x:Name="MainFrame" Grid.Column="1" NavigationUIVisibility="Hidden" Margin="10" />
