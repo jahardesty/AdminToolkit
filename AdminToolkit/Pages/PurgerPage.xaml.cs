@@ -5,7 +5,9 @@ using Path = System.IO.Path;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Linq; 
+using System.Linq;
+using System.Windows.Documents;
+using System.Linq.Expressions;
 
 namespace AdminToolkit.Pages
 {
@@ -70,7 +72,7 @@ namespace AdminToolkit.Pages
 
         private string FormatSize(long bytes)
         {
-            string[] Suffix = { "Bytes", "KB", "MB", "GB", "TB" };
+            string[] Suffix = { "bytes", "KBytes", "MBytes", "GBytes", "TBytes" };
             int i = 0;
             double dblSByte = bytes;
             while (dblSByte >= 1024 && i < Suffix.Length - 1)
@@ -85,7 +87,12 @@ namespace AdminToolkit.Pages
         {
             Dispatcher.Invoke(() =>
             {
-                txtLog.AppendText($"{DateTime.Now:HH:mm:ss} - {message}{Environment.NewLine}");
+                message = message.Trim('\n', '\r');
+                TextPointer end = txtLog.Document.ContentEnd;
+
+                end.InsertTextInRun(
+                    $"{message}{Environment.NewLine}");
+                
                 txtLog.ScrollToEnd();
             });
         }
@@ -102,7 +109,7 @@ namespace AdminToolkit.Pages
 
             btnScan.IsEnabled = false;
             btnStart.IsEnabled = false;
-            txtLog.Clear();
+            txtLog.Document.Blocks.Clear();
             LogToUI(isPurgeMode ? "!!! STARTING PURGE !!!" : "--- STARTING SCAN ---");
 
             long totalBytesProcessed = 0;
@@ -116,6 +123,8 @@ namespace AdminToolkit.Pages
 
                     string[] userFolders = Directory.GetDirectories(rootPath);
 
+
+
                     foreach (string userFolder in userFolders)
                     {
                         string folderName = Path.GetFileName(userFolder);
@@ -126,37 +135,60 @@ namespace AdminToolkit.Pages
                             continue;
                         }
 
-                        string[] foundBins = new string[0];
+                        string[] foundBins = Array.Empty<string>();
+
                         try
                         {
                             foundBins = Directory.GetDirectories(userFolder, "$RECYCLE.BIN", SearchOption.AllDirectories);
                         }
                         catch { }
 
+                        long userTotalSize = 0;
+                        int binCount = 0;
+
                         foreach (string recyclePath in foundBins)
                         {
                             long size = GetDirectorySize(recyclePath);
-                            totalBytesProcessed += size;
 
-                            if (isPurgeMode && size > 0)
+                            if (size > 0)
                             {
-                                try
+                                userTotalSize += size;
+                                binCount++;
+
+                                if (isPurgeMode)
                                 {
-                                    Directory.Delete(recyclePath, true);
-                                    LogToUI($"Purged: {folderName} ({FormatSize(size)})");
-                                }
-                                catch (Exception ex)
-                                {
-                                    LogToUI($"Could not purge {userFolder}: {ex.Message}");
+                                    try
+                                    {
+                                        Directory.Delete(recyclePath, true);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        LogToUI($"Could not purge {folderName}: {ex.Message}");
+                                    }
                                 }
                             }
-                            else if (!isPurgeMode && size > 0)
+                        }
+
+                        if (userTotalSize > 0)
+                        {
+                            totalBytesProcessed += userTotalSize;
+
+                            string sizeText = $"({FormatSize(userTotalSize)})";
+                            string locationText = $"[{binCount} location{(binCount == 1 ? "" : "s")}]";
+
+                            if (isPurgeMode)
                             {
-                                LogToUI($"Found: {folderName} ({FormatSize(size)})");
+                                LogToUI($"Purged: {folderName,-20} {sizeText,-15} {locationText}");
+                            }
+                            else
+                            {
+                                LogToUI($"Found:  {folderName,-20} {sizeText,-15} {locationText}");
                             }
                         }
                     }
                 }
+
+
                 catch (Exception ex)
                 {
                     LogToUI($"Critical Error: {ex.Message}");

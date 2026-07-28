@@ -264,7 +264,7 @@ namespace AdminToolkit.Pages
 
         private void ClearLog_Click(object sender, RoutedEventArgs e)
         {
-            txtLog.Clear();
+            txtLog.Document.Blocks.Clear();
         }
     }
 }

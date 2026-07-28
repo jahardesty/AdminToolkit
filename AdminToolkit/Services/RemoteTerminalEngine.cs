@@ -18,6 +18,7 @@ namespace AdminToolkit.Services
 
     public sealed class RemoteTerminalEngine : IDisposable
     {
+        public string DefaultRemoteShellDirectory { get; set; } = @"C:\";
         private readonly SemaphoreSlim _executionLock = new(1, 1);
 
         private Runspace? _runspace;
@@ -92,7 +93,31 @@ namespace AdminToolkit.Services
                     }
 
                     newRunspace.Open();
+                    using (PowerShell powerShell = PowerShell.Create())
+                    {
+                        powerShell.Runspace = newRunspace;
 
+                        powerShell
+                            .AddCommand("Set-Location")
+                            .AddParameter(
+                                "LiteralPath",
+                                DefaultRemoteShellDirectory);
+
+                        powerShell.Invoke();
+
+                        if (powerShell.HadErrors)
+                        {
+                            string errorMessage = string.Join(
+                                Environment.NewLine,
+                                powerShell.Streams.Error.Select(
+                                    error => error.ToString()));
+
+                            throw new InvalidOperationException(
+                                $"Could not open the default directory " +
+                                $"'{DefaultRemoteShellDirectory}'.{Environment.NewLine}" +
+                                errorMessage);
+                        }
+                    }
                     _runspace = newRunspace;
                 },
                 cancellationToken);

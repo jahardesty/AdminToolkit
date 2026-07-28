@@ -26,6 +26,7 @@ namespace AdminToolkit.Pages
             _terminalEngine.StatusChanged += TerminalEngine_StatusChanged;
 
             Unloaded += RemoteCLIPage_Unloaded;
+            Loaded += RemoteCLIPage_Loaded;
 
             AppendTerminalText(
                 "Welcome to Remote CLI.\n",
@@ -34,6 +35,16 @@ namespace AdminToolkit.Pages
             AppendTerminalText(
                 "Enter a target computer and click Connect.\n\n",
                 Colors.DarkGray);
+        }
+
+        private void RemoteCLIPage_Loaded(object sender, RoutedEventArgs e)
+        {
+            Window window = Window.GetWindow(this);
+            if (window != null)
+            {
+                window.Width = 1200;
+                window.Height = 615;
+            }
         }
 
         private async void ConnectButton_Click(
@@ -376,7 +387,7 @@ namespace AdminToolkit.Pages
             StatusText.Text =
                 $"Connected to {_terminalEngine.ComputerName}";
 
-            StatusText.Foreground = Brushes.LightGreen;
+            StatusText.Foreground = Brushes.DarkMagenta;
         }
 
         private void SetDisconnectedState()
